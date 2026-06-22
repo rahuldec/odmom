@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      moms: {
+        Row: {
+          attendees: Json
+          client_name: string
+          created_at: string
+          discussion_points: Json
+          employee_name: string
+          id: string
+          location: string | null
+          meeting_date: string
+          meeting_type: string
+          pending_points: Json
+          summary: string | null
+          updated_at: string
+          work_completed: Json
+        }
+        Insert: {
+          attendees?: Json
+          client_name: string
+          created_at?: string
+          discussion_points?: Json
+          employee_name: string
+          id?: string
+          location?: string | null
+          meeting_date: string
+          meeting_type: string
+          pending_points?: Json
+          summary?: string | null
+          updated_at?: string
+          work_completed?: Json
+        }
+        Update: {
+          attendees?: Json
+          client_name?: string
+          created_at?: string
+          discussion_points?: Json
+          employee_name?: string
+          id?: string
+          location?: string | null
+          meeting_date?: string
+          meeting_type?: string
+          pending_points?: Json
+          summary?: string | null
+          updated_at?: string
+          work_completed?: Json
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
