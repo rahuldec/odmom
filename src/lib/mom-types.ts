@@ -1,12 +1,30 @@
-export type Attendee = { name: string; designation: string; mobile?: string };
+export type AttendeeTeam = "client" | "okie_dokie";
+export type Attendee = {
+  name: string;
+  designation: string;
+  mobile?: string;
+  team: AttendeeTeam;
+};
 export type DiscussionPoint = { module: string; details: string };
 export type WorkCompletedItem = { module: string; task: string };
 export type Priority = "Low" | "Medium" | "High" | "Critical";
+export type PendingWith = "okie_dokie" | "client";
 export type PendingPoint = {
   module: string;
   requirement: string;
   priority: Priority;
+  pending_with: PendingWith;
 };
+
+export const ATTENDEE_TEAMS: { value: AttendeeTeam; label: string }[] = [
+  { value: "client", label: "Client" },
+  { value: "okie_dokie", label: "Okie Dokie Team" },
+];
+
+export const PENDING_WITH: { value: PendingWith; label: string }[] = [
+  { value: "okie_dokie", label: "Okie Dokie Team" },
+  { value: "client", label: "Client" },
+];
 
 export type MOM = {
   id: string;
