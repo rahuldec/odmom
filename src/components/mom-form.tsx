@@ -18,8 +18,12 @@ import { generateMomFromNotes } from "@/lib/mom.functions";
 import {
   MODULES,
   PRIORITIES,
+  ATTENDEE_TEAMS,
+  PENDING_WITH,
   type MOMInput,
   type Priority,
+  type AttendeeTeam,
+  type PendingWith,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -89,38 +93,6 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
 
   return (
     <form onSubmit={submit} className="space-y-6">
-      {/* AI Generator */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Generate MOM using AI
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            rows={3}
-            placeholder='e.g. "Met Principal. Fixed Class 11 fee issue. Updated hostel setup. Need tuition fee certificate."'
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <Button
-            type="button"
-            onClick={handleGenerate}
-            disabled={aiLoading}
-            variant="secondary"
-            className="gap-1.5"
-          >
-            {aiLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4" />
-            )}
-            Generate
-          </Button>
-        </CardContent>
-      </Card>
-
       {/* Meeting info */}
       <Card>
         <CardHeader><CardTitle className="text-base">Meeting Information</CardTitle></CardHeader>
@@ -155,9 +127,15 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         items={form.attendees}
         onChange={(v) => update("attendees", v)}
         addLabel="Add Attendee"
-        empty={{ name: "", designation: "", mobile: "" }}
+        empty={{ name: "", designation: "", mobile: "", team: "client" as AttendeeTeam }}
         render={(a, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+            <Select value={a.team} onValueChange={(v) => set({ ...a, team: v as AttendeeTeam })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ATTENDEE_TEAMS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Input placeholder="Name" value={a.name} onChange={(e) => set({ ...a, name: e.target.value })} />
             <Input placeholder="Designation" value={a.designation} onChange={(e) => set({ ...a, designation: e.target.value })} />
             <Input placeholder="Mobile (optional)" value={a.mobile ?? ""} onChange={(e) => set({ ...a, mobile: e.target.value })} />
@@ -197,19 +175,25 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
 
       {/* Pending */}
       <DynamicSection
-        title="Pending Points / Development Requests"
+        title="Pending Points"
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
-        empty={{ module: "Other", requirement: "", priority: "Medium" as Priority }}
+        empty={{ module: "Other", requirement: "", priority: "Medium" as Priority, pending_with: "okie_dokie" as PendingWith }}
         render={(p, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr_150px]">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_130px_170px]">
             <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
             <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
             <Select value={p.priority} onValueChange={(v) => set({ ...p, priority: v as Priority })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {PRIORITIES.map((pr) => <SelectItem key={pr} value={pr}>{pr}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -229,12 +213,43 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={submitting} className="gap-1.5">
-          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          {submitLabel}
-        </Button>
-      </div>
+      {/* Footer: AI generate + submit */}
+      <Card className="border-primary/30 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" />
+            Generate MOM using AI
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Textarea
+            rows={3}
+            placeholder='e.g. "Met Principal. Fixed Class 11 fee issue. Updated hostel setup. Need tuition fee certificate."'
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </CardContent>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-primary/20 px-6 py-3">
+          <Button
+            type="button"
+            onClick={handleGenerate}
+            disabled={aiLoading}
+            variant="secondary"
+            className="gap-1.5"
+          >
+            {aiLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Generate
+          </Button>
+          <Button type="submit" disabled={submitting} className="gap-1.5">
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {submitLabel}
+          </Button>
+        </div>
+      </Card>
     </form>
   );
 }
