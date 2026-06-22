@@ -101,7 +101,7 @@ function DetailPage() {
           <Section title="Attendees">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Designation</th><th className="px-3 py-2">Mobile</th></tr>
+                <tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Designation</th><th className="px-3 py-2">Mobile</th><th className="px-3 py-2">Team</th></tr>
               </thead>
               <tbody>
                 {mom.attendees.map((a, i) => (
@@ -109,6 +109,11 @@ function DetailPage() {
                     <td className="px-3 py-2 font-medium">{a.name}</td>
                     <td className="px-3 py-2 text-muted-foreground">{a.designation}</td>
                     <td className="px-3 py-2 text-muted-foreground">{a.mobile || "—"}</td>
+                    <td className="px-3 py-2">
+                      <Badge variant={a.team === "okie_dokie" ? "default" : "outline"}>
+                        {a.team === "okie_dokie" ? "Okie Dokie Team" : "Client"}
+                      </Badge>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -143,12 +148,15 @@ function DetailPage() {
         )}
 
         {mom.pending_points.length > 0 && (
-          <Section title="Pending Requirements">
+          <Section title="Pending Points">
             <ul className="divide-y divide-border">
               {mom.pending_points.map((p, i) => (
                 <li key={i} className="flex items-start gap-4 px-3 py-3">
                   <Badge variant="outline" className="h-fit shrink-0">{p.module}</Badge>
                   <p className="flex-1 text-sm leading-relaxed">{p.requirement}</p>
+                  <span className="h-fit shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client"}
+                  </span>
                   <PriorityBadge priority={p.priority} />
                 </li>
               ))}
