@@ -10,33 +10,62 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MomNewRouteImport } from './routes/mom.new'
+import { Route as MomIdRouteImport } from './routes/mom.$id'
+import { Route as MomIdEditRouteImport } from './routes/mom.$id.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MomNewRoute = MomNewRouteImport.update({
+  id: '/mom/new',
+  path: '/mom/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MomIdRoute = MomIdRouteImport.update({
+  id: '/mom/$id',
+  path: '/mom/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MomIdEditRoute = MomIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => MomIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/mom/$id': typeof MomIdRouteWithChildren
+  '/mom/new': typeof MomNewRoute
+  '/mom/$id/edit': typeof MomIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/mom/$id': typeof MomIdRouteWithChildren
+  '/mom/new': typeof MomNewRoute
+  '/mom/$id/edit': typeof MomIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/mom/$id': typeof MomIdRouteWithChildren
+  '/mom/new': typeof MomNewRoute
+  '/mom/$id/edit': typeof MomIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/mom/$id' | '/mom/new' | '/mom/$id/edit'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/mom/$id' | '/mom/new' | '/mom/$id/edit'
+  id: '__root__' | '/' | '/mom/$id' | '/mom/new' | '/mom/$id/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  MomIdRoute: typeof MomIdRouteWithChildren
+  MomNewRoute: typeof MomNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +77,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mom/new': {
+      id: '/mom/new'
+      path: '/mom/new'
+      fullPath: '/mom/new'
+      preLoaderRoute: typeof MomNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mom/$id': {
+      id: '/mom/$id'
+      path: '/mom/$id'
+      fullPath: '/mom/$id'
+      preLoaderRoute: typeof MomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mom/$id/edit': {
+      id: '/mom/$id/edit'
+      path: '/edit'
+      fullPath: '/mom/$id/edit'
+      preLoaderRoute: typeof MomIdEditRouteImport
+      parentRoute: typeof MomIdRoute
+    }
   }
 }
 
+interface MomIdRouteChildren {
+  MomIdEditRoute: typeof MomIdEditRoute
+}
+
+const MomIdRouteChildren: MomIdRouteChildren = {
+  MomIdEditRoute: MomIdEditRoute,
+}
+
+const MomIdRouteWithChildren = MomIdRoute._addFileChildren(MomIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  MomIdRoute: MomIdRouteWithChildren,
+  MomNewRoute: MomNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
