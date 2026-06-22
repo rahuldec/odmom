@@ -1,0 +1,41 @@
+export type Attendee = { name: string; designation: string; mobile?: string };
+export type DiscussionPoint = { module: string; details: string };
+export type WorkCompletedItem = { module: string; task: string };
+export type Priority = "Low" | "Medium" | "High" | "Critical";
+export type PendingPoint = {
+  module: string;
+  requirement: string;
+  priority: Priority;
+};
+
+export type MOM = {
+  id: string;
+  client_name: string;
+  meeting_date: string;
+  meeting_type: "online" | "offline";
+  employee_name: string;
+  location: string | null;
+  summary: string | null;
+  attendees: Attendee[];
+  discussion_points: DiscussionPoint[];
+  work_completed: WorkCompletedItem[];
+  pending_points: PendingPoint[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type MOMInput = Omit<MOM, "id" | "created_at" | "updated_at">;
+
+export const MODULES = [
+  "Admission",
+  "SIS",
+  "Fee",
+  "Transport",
+  "HR",
+  "Examination",
+  "Mobile App",
+  "Website",
+  "Other",
+] as const;
+
+export const PRIORITIES: Priority[] = ["Low", "Medium", "High", "Critical"];
