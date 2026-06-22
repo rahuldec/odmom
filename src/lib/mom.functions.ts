@@ -22,6 +22,7 @@ const attendeeSchema = z.object({
   name: z.string(),
   designation: z.string().default(""),
   mobile: z.string().optional(),
+  team: z.enum(["client", "okie_dokie"]).default("client"),
 });
 const dpSchema = z.object({ module: z.string(), details: z.string() });
 const wcSchema = z.object({ module: z.string(), task: z.string() });
@@ -29,6 +30,7 @@ const ppSchema = z.object({
   module: z.string(),
   requirement: z.string(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]),
+  pending_with: z.enum(["okie_dokie", "client"]).default("okie_dokie"),
 });
 
 const momInputSchema = z.object({
@@ -141,6 +143,7 @@ type AiOut = {
     module: string;
     requirement: string;
     priority: "Low" | "Medium" | "High" | "Critical";
+    pending_with: "okie_dokie" | "client";
   }[];
   summary: string;
 };
@@ -169,11 +172,12 @@ export const generateMomFromNotes = createServerFn({ method: "POST" })
 {
   "discussion_points": [{ "module": <one of ${modules.join(", ")}>, "details": string }],
   "work_completed":    [{ "module": <one of ${modules.join(", ")}>, "task": string }],
-  "pending_points":    [{ "module": <one of ${modules.join(", ")}>, "requirement": string, "priority": "Low"|"Medium"|"High"|"Critical" }],
+  "pending_points":    [{ "module": <one of ${modules.join(", ")}>, "requirement": string, "priority": "Low"|"Medium"|"High"|"Critical", "pending_with": "okie_dokie"|"client" }],
   "summary": string
 }
 - Be concise, professional, ERP/CRM tone.
 - Infer the right module per item. Use "Other" if unclear.
+- For each pending point, set "pending_with" to "okie_dokie" if the Okie Dokie team needs to act on it, or "client" if the school/institute needs to act on it.
 - Summary should be 2-4 sentences covering key outcomes and next steps.`;
 
     const resp = await fetch(
