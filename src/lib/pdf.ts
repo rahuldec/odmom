@@ -69,8 +69,13 @@ export function downloadMomPdf(mom: MOM) {
     section("Attendees");
     autoTable(doc, {
       startY: y,
-      head: [["Name", "Designation", "Mobile"]],
-      body: mom.attendees.map((a) => [a.name, a.designation, a.mobile || "—"]),
+      head: [["Name", "Designation", "Mobile", "Team"]],
+      body: mom.attendees.map((a) => [
+        a.name,
+        a.designation,
+        a.mobile || "—",
+        a.team === "okie_dokie" ? "Okie Dokie Team" : "Client",
+      ]),
       styles: { fontSize: 9, cellPadding: 4 },
       headStyles: { fillColor: [241, 245, 249], textColor: 30 },
       margin: { left: margin, right: margin },
@@ -110,14 +115,19 @@ export function downloadMomPdf(mom: MOM) {
   }
 
   if (mom.pending_points.length) {
-    section("Pending Requirements");
+    section("Pending Points");
     autoTable(doc, {
       startY: y,
-      head: [["Module", "Requirement", "Priority"]],
-      body: mom.pending_points.map((p) => [p.module, p.requirement, p.priority]),
+      head: [["Module", "Requirement", "Priority", "Pending With"]],
+      body: mom.pending_points.map((p) => [
+        p.module,
+        p.requirement,
+        p.priority,
+        p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client",
+      ]),
       styles: { fontSize: 9, cellPadding: 4 },
       headStyles: { fillColor: [241, 245, 249], textColor: 30 },
-      columnStyles: { 0: { cellWidth: 100 }, 2: { cellWidth: 70 } },
+      columnStyles: { 0: { cellWidth: 90 }, 2: { cellWidth: 60 }, 3: { cellWidth: 90 } },
       margin: { left: margin, right: margin },
     });
     // @ts-expect-error autotable
