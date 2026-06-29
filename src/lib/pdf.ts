@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { MOM } from "./mom-types";
-import logoUrl from "../logo.png";
+import logoUrl from '../logo.png';
 
 type LoadedLogo = { dataUrl: string; width: number; height: number };
 
@@ -48,7 +48,7 @@ export async function downloadMomPdf(mom: MOM) {
 
   // Header band
   const headerHeight = 74;
-  doc.setFillColor(30, 41, 59); // slate-800
+  doc.setFillColor(255, 255, 255); // white
   doc.rect(0, 0, pageWidth, headerHeight, "F");
 
   let textX = margin;
@@ -59,13 +59,10 @@ export async function downloadMomPdf(mom: MOM) {
     textX = margin + logoW + 14;
   }
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(30, 41, 59); // navy
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
   doc.text("Minutes of Meeting (MOM)", textX, headerHeight / 2 - 4);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Okie Dokie Solutions — Client Visit MOM Portal", textX, headerHeight / 2 + 14);
 
   doc.setTextColor(20, 20, 20);
   let y = headerHeight + 25;
@@ -184,8 +181,6 @@ export async function downloadMomPdf(mom: MOM) {
 
   if (mom.summary) {
     section("Conclusion");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
     const lines = doc.splitTextToSize(mom.summary, pageWidth - margin * 2);
     if (y + lines.length * 13 > 780) {
       doc.addPage();
