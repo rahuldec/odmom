@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
-import logoUrl from "@/lib/logo.png";
+import logoUrl from "@/logo.png";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
