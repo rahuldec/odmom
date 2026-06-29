@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { CalendarRange, FileText, Plus, Search, Trash2 } from "lucide-react";
+import { FileText, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,8 +37,6 @@ function ListPage() {
   const [client, setClient] = useState("");
   const [employee, setEmployee] = useState("");
   const [type, setType] = useState<"all" | "online" | "offline">("all");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
 
   const filters = useMemo(
     () => ({
@@ -46,10 +44,8 @@ function ListPage() {
       client: client || undefined,
       employee: employee || undefined,
       meeting_type: type === "all" ? undefined : type,
-      from: from || undefined,
-      to: to || undefined,
     }),
-    [search, client, employee, type, from, to],
+    [search, client, employee, type],
   );
 
   const { data, isLoading, refetch } = useQuery({
@@ -83,7 +79,7 @@ function ListPage() {
       </div>
 
       <Card className="mb-6 p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
           <div className="relative md:col-span-2">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input className="pl-8" placeholder="Search by client, employee, summary…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -98,11 +94,6 @@ function ListPage() {
               <SelectItem value="online">Online</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex items-center gap-2">
-            <CalendarRange className="h-4 w-4 text-muted-foreground" />
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
         </div>
       </Card>
 
