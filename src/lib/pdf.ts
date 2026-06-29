@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { MOM } from "./mom-types";
-import logoUrl from "./logo.png";
+const logoUrl = "https://okiedokie-erp-images.s3.ap-south-1.amazonaws.com/Okie%20Dokie/2025/12/sourceURL/26aebcbe10f4ac5a3e8b-611ed1b9032568edd4f3-Okie_Dokie_App_icon__2___2_-removebg-preview.png";
 
 type LoadedLogo = { dataUrl: string; width: number; height: number };
 
