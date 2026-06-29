@@ -7,12 +7,10 @@ export type Attendee = {
 };
 export type DiscussionPoint = { module: string; details: string };
 export type WorkCompletedItem = { module: string; task: string };
-export type Priority = "Low" | "Medium" | "High" | "Critical";
 export type PendingWith = "okie_dokie" | "client";
 export type PendingPoint = {
   module: string;
   requirement: string;
-  priority: Priority;
   pending_with: PendingWith;
 };
 
@@ -55,5 +53,3 @@ export const MODULES = [
   "Website",
   "Other",
 ] as const;
-
-export const PRIORITIES: Priority[] = ["Low", "Medium", "High", "Critical"];
