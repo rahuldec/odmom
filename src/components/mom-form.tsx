@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { Plus, Sparkles, Trash2, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Sparkles,
+  Trash2,
+  Loader2,
+  Users,
+  MessagesSquare,
+  ClipboardCheck,
+  AlarmClockCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +26,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { generateMomFromNotes } from "@/lib/mom.functions";
 import {
   MODULES,
-  PRIORITIES,
   ATTENDEE_TEAMS,
   PENDING_WITH,
   type MOMInput,
-  type Priority,
   type AttendeeTeam,
   type PendingWith,
 } from "@/lib/mom-types";
@@ -48,7 +55,6 @@ const blank = (): MOMInput => ({
 
 export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
   const [form, setForm] = useState<MOMInput>(initial ?? blank());
-  const [notes, setNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const genFn = useServerFn(generateMomFromNotes);
 
@@ -56,10 +62,38 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
     setForm((f) => ({ ...f, [k]: v }));
 
   const handleGenerate = async () => {
+    const lines: string[] = [];
+
+    const dp = form.discussion_points.filter((d) => d.details.trim());
+    if (dp.length) {
+      lines.push("Discussion points (rough):");
+      dp.forEach((d) => lines.push(`- [${d.module}] ${d.details.trim()}`));
+    }
+
+    const wc = form.work_completed.filter((w) => w.task.trim());
+    if (wc.length) {
+      lines.push("Work completed during visit (rough):");
+      wc.forEach((w) => lines.push(`- [${w.module}] ${w.task.trim()}`));
+    }
+
+    const pp = form.pending_points.filter((p) => p.requirement.trim());
+    if (pp.length) {
+      lines.push("Pending points (rough):");
+      pp.forEach((p) =>
+        lines.push(
+          `- [${p.module}] ${p.requirement.trim()} (pending with: ${p.pending_with === "okie_dokie" ? "Okie Dokie team" : "client"})`,
+        ),
+      );
+    }
+
+    const notes = lines.join("\n");
     if (notes.trim().length < 5) {
-      toast.error("Add a few words of notes first.");
+      toast.error(
+        "Add a few rough lines under Discussion Points, Work Completed, or Pending Points first.",
+      );
       return;
     }
+
     setAiLoading(true);
     try {
       const r = await genFn({ data: { notes } });
@@ -70,7 +104,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         pending_points: r.pending_points,
         summary: r.summary,
       }));
-      toast.success("AI generated MOM sections.");
+      toast.success("AI polished your MOM.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "AI failed");
     } finally {
@@ -124,6 +158,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       {/* Attendees */}
       <DynamicSection
         title="Attendees"
+        icon={Users}
         items={form.attendees}
         onChange={(v) => update("attendees", v)}
         addLabel="Add Attendee"
@@ -146,6 +181,8 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       {/* Discussion points */}
       <DynamicSection
         title="Discussion Points"
+        icon={MessagesSquare}
+        hint="Just write roughly — the AI will tidy up the wording for you."
         items={form.discussion_points}
         onChange={(v) => update("discussion_points", v)}
         addLabel="Add Point"
@@ -161,6 +198,8 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       {/* Work completed */}
       <DynamicSection
         title="Work Completed During Visit"
+        icon={ClipboardCheck}
+        hint="Just write roughly — the AI will tidy up the wording for you."
         items={form.work_completed}
         onChange={(v) => update("work_completed", v)}
         addLabel="Add Task"
@@ -176,20 +215,16 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       {/* Pending */}
       <DynamicSection
         title="Pending Points"
+        icon={AlarmClockCheck}
+        hint="Just write roughly — the AI will tidy up the wording for you."
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
-        empty={{ module: "Other", requirement: "", priority: "Medium" as Priority, pending_with: "okie_dokie" as PendingWith }}
+        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith }}
         render={(p, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_130px_170px]">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
             <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
             <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
-            <Select value={p.priority} onValueChange={(v) => set({ ...p, priority: v as Priority })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PRIORITIES.map((pr) => <SelectItem key={pr} value={pr}>{pr}</SelectItem>)}
-              </SelectContent>
-            </Select>
             <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -200,56 +235,41 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         )}
       />
 
-      {/* Summary */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Meeting Summary</CardTitle></CardHeader>
-        <CardContent>
-          <Textarea
-            rows={5}
-            value={form.summary ?? ""}
-            onChange={(e) => update("summary", e.target.value)}
-            placeholder="Provide a concise summary of the meeting, key outcomes, and next steps."
-          />
-        </CardContent>
-      </Card>
-
-      {/* Footer: AI generate + submit */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" />
-            Generate MOM using AI
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Textarea
-            rows={3}
-            placeholder='e.g. "Met Principal. Fixed Class 11 fee issue. Updated hostel setup. Need tuition fee certificate."'
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </CardContent>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-primary/20 px-6 py-3">
+      {/* Big AI generate CTA */}
+      <Card className="overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent">
+        <CardContent className="flex flex-col items-center gap-4 px-6 py-10 text-center">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </span>
+          <div className="space-y-1">
+            <p className="text-base font-semibold">Let AI polish this MOM</p>
+            <p className="mx-auto max-w-md text-sm text-muted-foreground">
+              Wrote the sections above roughly? One click rewrites them into clean,
+              professional language and adds a summary — no extra typing needed.
+            </p>
+          </div>
           <Button
             type="button"
             onClick={handleGenerate}
             disabled={aiLoading}
-            variant="secondary"
-            className="gap-1.5"
+            size="lg"
+            className="w-full max-w-sm gap-2 text-base shadow-sm"
           >
             {aiLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Sparkles className="h-4 w-4" />
+              <Sparkles className="h-5 w-5" />
             )}
-            Generate
+            Generate MOM using AI
           </Button>
-          <Button type="submit" disabled={submitting} className="gap-1.5">
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {submitLabel}
-          </Button>
-        </div>
+        </CardContent>
       </Card>
+
+      {/* Final submit, kept separate from the AI card */}
+      <Button type="submit" disabled={submitting} size="lg" className="w-full gap-2 text-base">
+        {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
+        {submitLabel}
+      </Button>
     </form>
   );
 }
@@ -275,9 +295,11 @@ function ModuleSelect({ value, onChange }: { value: string; onChange: (v: string
 }
 
 function DynamicSection<T>({
-  title, items, onChange, render, empty, addLabel,
+  title, icon: Icon, hint, items, onChange, render, empty, addLabel,
 }: {
   title: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  hint?: string;
   items: T[];
   onChange: (v: T[]) => void;
   render: (item: T, set: (next: T) => void) => React.ReactNode;
@@ -286,14 +308,20 @@ function DynamicSection<T>({
 }) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base">{title}</CardTitle>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+        <div>
+          <CardTitle className="flex items-center gap-2 text-base">
+            {Icon && <Icon className="h-4 w-4 text-primary" />}
+            {title}
+          </CardTitle>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+        </div>
         <Button
           type="button"
           size="sm"
           variant="outline"
           onClick={() => onChange([...items, structuredClone(empty)])}
-          className="gap-1.5"
+          className="shrink-0 gap-1.5"
         >
           <Plus className="h-3.5 w-3.5" /> {addLabel}
         </Button>
@@ -303,7 +331,7 @@ function DynamicSection<T>({
           <p className="text-sm text-muted-foreground">No items yet.</p>
         )}
         {items.map((item, i) => (
-          <div key={i} className="flex items-start gap-2 rounded-md border border-border p-3">
+          <div key={i} className="flex items-start gap-2 rounded-md border border-border bg-muted/20 p-3 transition-colors hover:bg-muted/35">
             <div className="flex-1">
               {render(item, (next) => {
                 const copy = items.slice();
