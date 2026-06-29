@@ -13,6 +13,7 @@ function loadLogo(): Promise<LoadedLogo | null> {
   return new Promise((resolve) => {
     try {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
