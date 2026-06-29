@@ -46,26 +46,66 @@ export async function downloadMomPdf(mom: MOM) {
 
   const logo = await loadLogo();
 
-  // Header band
-  const headerHeight = 74;
-  doc.setFillColor(255, 255, 255); // white
+  // ── Header ──────────────────────────────────────────────────────────────
+  const headerHeight = 90;
+
+  // Navy top bar (full width)
+  doc.setFillColor(30, 41, 59);
   doc.rect(0, 0, pageWidth, headerHeight, "F");
 
+  // White inner card (inset 6 pt on each side, 6 pt from top, fills rest)
+  const cardX = 6;
+  const cardY = 6;
+  const cardW = pageWidth - 12;
+  const cardH = headerHeight - 12;
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(cardX, cardY, cardW, cardH, 4, 4, "F");
+
+  // Logo inside white card
   let textX = margin;
   if (logo) {
-    const logoH = 38;
+    const logoH = 44;
     const logoW = (logo.width / logo.height) * logoH;
-    doc.addImage(logo.dataUrl, "PNG", margin, (headerHeight - logoH) / 2, logoW, logoH);
-    textX = margin + logoW + 14;
+    const logoX = cardX + 14;
+    const logoY = cardY + (cardH - logoH) / 2;
+    doc.addImage(logo.dataUrl, "PNG", logoX, logoY, logoW, logoH);
+    textX = logoX + logoW + 14;
+  } else {
+    textX = cardX + 18;
   }
 
-  doc.setTextColor(30, 41, 59); // navy
+  // Title
+  const titleY = cardY + cardH / 2 - 5;
+  doc.setTextColor(30, 41, 59);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(17);
-  doc.text("Minutes of Meeting (MOM)", textX, headerHeight / 2 - 4);
+  doc.setFontSize(18);
+  doc.text("Minutes of Meeting", textX, titleY);
+
+  // Thin navy accent line between title and subtitle
+  const titleWidth = doc.getTextWidth("Minutes of Meeting");
+  doc.setDrawColor(30, 41, 59);
+  doc.setLineWidth(0.5);
+
+  // Subtitle / tagline
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139); // slate-500
+  doc.text("Okie Dokie Solutions", textX, titleY + 13);
+
+  // Right-aligned "MOM" badge on navy bar (top right)
+  const badgeW = 52;
+  const badgeH = 18;
+  const badgeX = pageWidth - cardX - 14 - badgeW;
+  const badgeY = cardY + (cardH - badgeH) / 2;
+  doc.setFillColor(30, 41, 59);
+  doc.roundedRect(badgeX, badgeY, badgeW, badgeH, 3, 3, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.text("MOM", badgeX + badgeW / 2, badgeY + badgeH / 2 + 3, { align: "center" });
 
   doc.setTextColor(20, 20, 20);
-  let y = headerHeight + 25;
+  let y = headerHeight + 22;
 
   // Meeting Information block
   doc.setFont("helvetica", "bold");
