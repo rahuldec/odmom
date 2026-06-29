@@ -1,20 +1,18 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { MOM } from "./mom-types";
-
-const LOGO_URL =
-  "https://okiedokie-erp-images.s3.ap-south-1.amazonaws.com/Okie%20Dokie/2025/12/sourceURL/26aebcbe10f4ac5a3e8b-611ed1b9032568edd4f3-Okie_Dokie_App_icon__2___2_-removebg-preview.png";
+import logoUrl from "./logo.png";
 
 type LoadedLogo = { dataUrl: string; width: number; height: number };
 
-// Loads the company logo and converts it to a data URL so jsPDF can embed it.
-// Falls back to null (text-only header) if the image can't be loaded, e.g. if
-// the S3 bucket doesn't allow cross-origin reads from this domain yet.
+// Loads the bundled company logo and converts it to a data URL so jsPDF can
+// embed it. Since the logo is bundled with the app (not fetched from S3),
+// there's no cross-origin restriction reading its pixel data into a canvas.
+// Still falls back to null (text-only header) if loading unexpectedly fails.
 function loadLogo(): Promise<LoadedLogo | null> {
   return new Promise((resolve) => {
     try {
       const img = new Image();
-      img.crossOrigin = "anonymous";
       img.onload = () => {
         try {
           const canvas = document.createElement("canvas");
@@ -33,7 +31,7 @@ function loadLogo(): Promise<LoadedLogo | null> {
         }
       };
       img.onerror = () => resolve(null);
-      img.src = LOGO_URL;
+      img.src = logoUrl;
     } catch {
       resolve(null);
     }
