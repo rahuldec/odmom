@@ -67,7 +67,6 @@ export async function downloadMomPdf(mom: MOM) {
   const BLUE_TX: [number, number, number] = [27, 86, 168];
 
   const logo = await loadLogo();
-  const docId = `MOM-${(mom.id || "").slice(0, 8).toUpperCase() || "DRAFT"}`;
 
   // ── HEADER (drawn on every page) ─────────────────────────────────────
   const headerH = 96;
@@ -112,12 +111,7 @@ export async function downloadMomPdf(mom: MOM) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(...ORANGE);
-    doc.text("MINUTES OF MEETING", pageWidth - margin, headerH / 2 - 6, { align: "right" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(...SLATE_LIGHT);
-    doc.text(docId, pageWidth - margin, headerH / 2 + 10, { align: "right" });
+    doc.text("MINUTES OF MEETING", pageWidth - margin, headerH / 2 + 3, { align: "right" });
   };
 
   drawHeader();
@@ -350,14 +344,8 @@ export async function downloadMomPdf(mom: MOM) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.setTextColor(...INK);
-  doc.text(mom.employee_name, margin, sigY + 60);
-  doc.text("Client Representative", margin + sigW + 30, sigY + 60);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...SLATE);
-  doc.text("Prepared by — Okie Dokie Solutions", margin, sigY + 72);
-  doc.text(mom.client_name, margin + sigW + 30, sigY + 72);
+  doc.text(mom.employee_name, margin, sigY + 62);
+  doc.text(mom.client_name, margin + sigW + 30, sigY + 62);
 
   // ── Footer (every page) ──────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
@@ -371,7 +359,6 @@ export async function downloadMomPdf(mom: MOM) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...SLATE);
-    doc.text(docId, margin, footerY);
     doc.text("www.okiedokiepay.com  ·  services@okiedokiepay.com", pageWidth / 2, footerY, {
       align: "center",
     });
