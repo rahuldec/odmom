@@ -86,6 +86,14 @@ export async function downloadMomPdf(mom: MOM) {
     const logoX = margin;
     const logoY = (headerH - logoSize) / 2 - 2;
     if (logo) {
+      // The source PNG has a transparent (not white) background outside its
+      // colored strokes, so on the navy header those "white" areas show navy
+      // through them. Paint a white backing disc sized to the badge's visible
+      // ring (~39% of the image box) before placing the logo to restore it.
+      const cx = logoX + logoSize / 2;
+      const cy = logoY + logoSize / 2;
+      doc.setFillColor(...WHITE);
+      doc.circle(cx, cy, logoSize * 0.41, "F");
       doc.addImage(logo.dataUrl, "PNG", logoX, logoY, logoSize, logoSize);
     }
 
