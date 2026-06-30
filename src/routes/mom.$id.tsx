@@ -74,7 +74,7 @@ function DetailPage() {
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleShare}>
             <Share2 className="h-4 w-4" /> Share
           </Button>
-          <Link to="/mom/$id/edit" params={{ id }}>
+          <Link to="/edit/$id" params={{ id }}>
             <Button size="sm" className="gap-1.5"><Pencil className="h-4 w-4" /> Edit</Button>
           </Link>
           <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
