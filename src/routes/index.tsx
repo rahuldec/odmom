@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { FileText, Plus, Search, Trash2 } from "lucide-react";
+import { Download, FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { deleteMom, listMoms } from "@/lib/mom.functions";
+import { deleteMom, getMom, listMoms } from "@/lib/mom.functions";
+import { downloadMomPdf } from "@/lib/pdf";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -32,6 +33,8 @@ function ListPage() {
   const router = useRouter();
   const list = useServerFn(listMoms);
   const del = useServerFn(deleteMom);
+  const get = useServerFn(getMom);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [client, setClient] = useState("");
@@ -61,6 +64,18 @@ function ListPage() {
       refetch();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  };
+
+  const handleDownload = async (id: string) => {
+    setDownloadingId(id);
+    try {
+      const mom = await get({ data: { id } });
+      await downloadMomPdf(mom);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate PDF");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -139,9 +154,26 @@ function ListPage() {
                     <td className="px-4 py-3">{m.employee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{m.location || "—"}</td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <Button size="icon" variant="ghost" onClick={() => handleDelete(m.id)} aria-label="Delete">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDownload(m.id)}
+                          disabled={downloadingId === m.id}
+                          aria-label="Download PDF"
+                          title="Download PDF"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Link to="/mom/$id/edit" params={{ id: m.id }}>
+                          <Button size="icon" variant="ghost" aria-label="Edit PDF" title="Edit PDF">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button size="icon" variant="ghost" onClick={() => handleDelete(m.id)} aria-label="Delete">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
