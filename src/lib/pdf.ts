@@ -197,50 +197,69 @@ export async function downloadMomPdf(mom: MOM) {
   // ── Meeting Information ───────────────────────────────────────────────
   section("Meeting Information");
 
-  const infoBoxH = 78;
-  ensureSpace(infoBoxH + 10);
-  doc.setFillColor(...ROW_TINT);
-  doc.roundedRect(margin, y - 4, contentW, infoBoxH, 4, 4, "F");
+  // Hero row: Client / Institute as a prominent banner card with orange accent.
+  const heroH = 46;
+  ensureSpace(heroH + 14);
+  doc.setFillColor(...NAVY);
+  doc.roundedRect(margin, y - 4, contentW, heroH, 5, 5, "F");
+  doc.setFillColor(...ORANGE);
+  doc.rect(margin, y - 4, 5, heroH, "F");
 
-  const colGap = 20;
-  const colW = (contentW - colGap) / 2;
-  const c1 = margin + 18;
-  const c2 = margin + colW + colGap + 18;
-  let ry = y + 18;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...SLATE_LIGHT);
+  doc.text("CLIENT / INSTITUTE", margin + 20, y + 12);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...WHITE);
+  doc.text(mom.client_name, margin + 20, y + 30);
 
-  const infoRows: [string, string, string, string][] = [
-    ["CLIENT / INSTITUTE", mom.client_name, "EMPLOYEE", mom.employee_name],
-    ["MEETING DATE", formatDate(mom.meeting_date), "LOCATION", mom.location || "—"],
-    [
-      "MEETING TYPE",
-      mom.meeting_type === "online" ? "Online" : "Offline",
-      "ATTENDEES",
-      String(mom.attendees.length || 0),
-    ],
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...SLATE_LIGHT);
+  doc.text("EMPLOYEE", pageWidth - margin - 20, y + 12, { align: "right" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...WHITE);
+  doc.text(mom.employee_name, pageWidth - margin - 20, y + 30, { align: "right" });
+
+  y += heroH + 16;
+
+  // Stat cards: Meeting Date, Meeting Type, Attendees — 3 equal columns.
+  const cardH = 52;
+  ensureSpace(cardH + 10);
+  const cardGap = 12;
+  const cardW = (contentW - cardGap * 2) / 3;
+
+  const statCards: [string, string][] = [
+    ["MEETING DATE", formatDate(mom.meeting_date)],
+    ["MEETING TYPE", mom.meeting_type === "online" ? "Online" : "Offline"],
+    ["ATTENDEES", String(mom.attendees.length || 0)],
   ];
 
-  for (const [l1, v1, l2, v2] of infoRows) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...SLATE);
-    doc.text(l1, c1, ry);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(...INK);
-    doc.text(v1, c1, ry + 13);
+  statCards.forEach(([label, value], i) => {
+    const cx = margin + i * (cardW + cardGap);
+
+    doc.setFillColor(...ROW_TINT);
+    doc.setDrawColor(...LINE);
+    doc.setLineWidth(0.75);
+    doc.roundedRect(cx, y - 4, cardW, cardH, 5, 5, "FD");
+
+    doc.setFillColor(...ORANGE);
+    doc.roundedRect(cx, y - 4, cardW, 3, 1.5, 1.5, "F");
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFontSize(7.2);
     doc.setTextColor(...SLATE);
-    doc.text(l2, c2, ry);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(...INK);
-    doc.text(v2, c2, ry + 13);
+    doc.text(label, cx + 14, y + 16);
 
-    ry += 21;
-  }
-  y += infoBoxH + 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...NAVY);
+    doc.text(value, cx + 14, y + 35);
+  });
+
+  y += cardH + 20;
 
   // ── Attendees ──────────────────────────────────────────────────────────
   if (mom.attendees.length) {
