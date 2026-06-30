@@ -165,7 +165,7 @@ function ListPage() {
                         >
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Link to="/mom/$id/edit" params={{ id: m.id }}>
+                        <Link to="/edit/$id" params={{ id: m.id }}>
                           <Button size="icon" variant="ghost" aria-label="Edit PDF" title="Edit PDF">
                             <Pencil className="h-4 w-4" />
                           </Button>
