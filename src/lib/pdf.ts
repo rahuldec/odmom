@@ -266,19 +266,30 @@ export async function downloadMomPdf(mom: MOM) {
     section("Attendees");
     autoTable(doc, {
       startY: y,
-      head: [["Name", "Designation", "Mobile", "Team"]],
-      body: mom.attendees.map((a) => [a.name, a.designation, a.mobile || "—", teamBadge(a.team)]),
-      columnStyles: { 3: { halign: "center" } },
+      head: [["Name", "Designation", "Team"]],
+      body: mom.attendees.map((a) => [a.name, a.designation, teamBadge(a.team)]),
+      columnStyles: { 2: { halign: "center", cellWidth: 110 } },
+      styles: {
+        ...tableTheme.styles,
+        fontSize: 8.5,
+        cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
+      },
+      headStyles: {
+        ...tableTheme.headStyles,
+        fontSize: 8,
+        cellPadding: { top: 6, bottom: 6, left: 8, right: 8 },
+      },
       didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 3) {
+        if (data.section === "body" && data.column.index === 2) {
           const isOdc = String(data.cell.raw) === "Okie Dokie Team";
           data.cell.styles.fillColor = isOdc ? BLUE_BG : ORANGE_LIGHT;
           data.cell.styles.textColor = isOdc ? BLUE_TX : [180, 83, 9];
           data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fontSize = 8;
+          data.cell.styles.fontSize = 7.5;
         }
       },
-      ...tableTheme,
+      alternateRowStyles: tableTheme.alternateRowStyles,
+      margin: tableTheme.margin,
     });
     // @ts-expect-error autotable
     y = doc.lastAutoTable.finalY + 24;
