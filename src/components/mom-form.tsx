@@ -148,6 +148,10 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       toast.error("Client name and Employee name are required.");
       return;
     }
+    if (form.photos.length === 0) {
+      toast.error("Please add at least one photo before submitting.");
+      return;
+    }
     onSubmit({
       ...form,
       location: form.location?.trim() || null,
@@ -458,10 +462,10 @@ function PhotosSection({
         <div className="flex-1 min-w-0">
           <CardTitle className="flex items-center gap-2 text-base">
             <ImagePlus className="h-4 w-4 text-primary" />
-            Photos
+            Photos *
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            Attach photos from the visit (whiteboard notes, site pictures, screenshots). Max 8MB each.
+            Attach photos from the visit (whiteboard notes, site pictures, screenshots). Max 8MB each. At least one photo is required.
           </p>
         </div>
         <div className="shrink-0">
@@ -492,7 +496,7 @@ function PhotosSection({
       </CardHeader>
       <CardContent>
         {photos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No photos yet.</p>
+          <p className="text-sm text-destructive">No photos yet. Please add at least one photo.</p>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
             {photos.map((p, i) => (
@@ -531,4 +535,3 @@ function PhotosSection({
     </Card>
   );
 }
-
