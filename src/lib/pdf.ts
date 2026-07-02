@@ -35,6 +35,49 @@ function loadLogo(): Promise<LoadedLogo | null> {
   });
 }
 
+type LoadedImage = { dataUrl: string; width: number; height: number };
+
+// Fetch a (possibly remote/signed-URL) image and convert it to a base64
+// data URL jsPDF can embed, along with its natural pixel dimensions.
+function loadImage(url: string): Promise<LoadedImage | null> {
+  return new Promise((resolve) => {
+    (async () => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return resolve(null);
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((res2, rej2) => {
+          const reader = new FileReader();
+          reader.onload = () => res2(reader.result as string);
+          reader.onerror = () => rej2(new Error("read failed"));
+          reader.readAsDataURL(blob);
+        });
+        const dims = await new Promise<{ width: number; height: number }>((res3, rej3) => {
+          const img = new Image();
+          img.onload = () => res3({ width: img.naturalWidth, height: img.naturalHeight });
+          img.onerror = () => rej3(new Error("decode failed"));
+          img.src = dataUrl;
+        });
+        resolve({ dataUrl, ...dims });
+      } catch {
+        resolve(null);
+      }
+    })();
+  });
+}
+
+// Scale (imgW, imgH) down to fit inside (boxW, boxH) while preserving aspect ratio.
+function fitInBox(imgW: number, imgH: number, boxW: number, boxH: number) {
+  const scale = Math.min(boxW / imgW, boxH / imgH);
+  return { w: imgW * scale, h: imgH * scale };
+}
+
+function imageFormat(dataUrl: string): "PNG" | "WEBP" | "JPEG" {
+  if (dataUrl.startsWith("data:image/png")) return "PNG";
+  if (dataUrl.startsWith("data:image/webp")) return "WEBP";
+  return "JPEG";
+}
+
 // Format an ISO/Date-ish string into "12 Jan 2026"
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
@@ -67,6 +110,7 @@ export async function downloadMomPdf(mom: MOM) {
   const BLUE_TX: [number, number, number] = [27, 86, 168];
 
   const logo = await loadLogo();
+  const loadedPhotos = await Promise.all(mom.photos.map((p) => loadImage(p.url)));
 
   // ── HEADER (drawn on every page) ─────────────────────────────────────
   const headerH = 96;
@@ -347,6 +391,59 @@ export async function downloadMomPdf(mom: MOM) {
     });
     // @ts-expect-error autotable
     y = doc.lastAutoTable.finalY + 24;
+  }
+
+  // ── Photos ───────────────────────────────────────────────────────────────
+  if (mom.photos.length) {
+    section("Photos");
+
+    const cols = 2;
+    const gap = 14;
+    const boxW = (contentW - gap * (cols - 1)) / cols;
+    const boxH = 170;
+    const pad = 8;
+    const captionGap = 12;
+    const rowGap = 16;
+
+    for (let i = 0; i < mom.photos.length; i += cols) {
+      ensureSpace(boxH + captionGap + rowGap);
+      const rowY = y;
+
+      for (let c = 0; c < cols; c++) {
+        const idx = i + c;
+        if (idx >= mom.photos.length) break;
+        const photo = mom.photos[idx];
+        const loaded = loadedPhotos[idx];
+        const cx = margin + c * (boxW + gap);
+
+        doc.setFillColor(...ROW_TINT);
+        doc.setDrawColor(...LINE);
+        doc.setLineWidth(0.75);
+        doc.roundedRect(cx, rowY, boxW, boxH, 4, 4, "FD");
+
+        if (loaded) {
+          const { w, h } = fitInBox(loaded.width, loaded.height, boxW - pad * 2, boxH - pad * 2);
+          const ix = cx + (boxW - w) / 2;
+          const iy = rowY + (boxH - h) / 2;
+          doc.addImage(loaded.dataUrl, imageFormat(loaded.dataUrl), ix, iy, w, h);
+        } else {
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(8.5);
+          doc.setTextColor(...SLATE);
+          doc.text("Image unavailable", cx + boxW / 2, rowY + boxH / 2, { align: "center" });
+        }
+
+        if (photo.caption?.trim()) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(...SLATE);
+          const capLines = doc.splitTextToSize(photo.caption.trim(), boxW);
+          doc.text(capLines[0], cx + boxW / 2, rowY + boxH + captionGap, { align: "center" });
+        }
+      }
+
+      y = rowY + boxH + captionGap + rowGap;
+    }
   }
 
   // ── Conclusion ───────────────────────────────────────────────────────────
