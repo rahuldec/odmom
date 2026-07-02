@@ -271,6 +271,13 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         )}
       />
 
+      {/* Photos */}
+      <PhotosSection
+        photos={form.photos}
+        onChange={(v) => update("photos", v)}
+      />
+
+
       {/* Final submit */}
       <Button type="submit" disabled={submitting} size="lg" className="w-full gap-2 text-base">
         {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
