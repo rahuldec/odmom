@@ -24,6 +24,8 @@ export const PENDING_WITH: { value: PendingWith; label: string }[] = [
   { value: "client", label: "Client" },
 ];
 
+export type MomPhoto = { path: string; url: string; caption?: string };
+
 export type MOM = {
   id: string;
   client_name: string;
@@ -36,11 +38,13 @@ export type MOM = {
   discussion_points: DiscussionPoint[];
   work_completed: WorkCompletedItem[];
   pending_points: PendingPoint[];
+  photos: MomPhoto[];
   created_at: string;
   updated_at: string;
 };
 
 export type MOMInput = Omit<MOM, "id" | "created_at" | "updated_at">;
+
 
 export const MODULES = [
   "Admission",

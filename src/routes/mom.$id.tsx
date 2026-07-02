@@ -170,6 +170,34 @@ function DetailPage() {
           </Section>
         )}
 
+        {mom.photos && mom.photos.length > 0 && (
+          <Section title="Photos">
+            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 md:grid-cols-4">
+              {mom.photos.map((p, i) => (
+                <a
+                  key={p.path}
+                  href={p.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group block overflow-hidden rounded-md border border-border bg-muted/20"
+                >
+                  <img
+                    src={p.url}
+                    alt={p.caption || `Photo ${i + 1}`}
+                    className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
+                  />
+                  {p.caption && (
+                    <p className="border-t border-border px-2 py-1 text-xs text-muted-foreground">
+                      {p.caption}
+                    </p>
+                  )}
+                </a>
+              ))}
+            </div>
+          </Section>
+        )}
+
+
         {mom.summary && (
           <Section title="Conclusion">
             <p className="whitespace-pre-wrap px-3 py-3 text-sm leading-relaxed">{mom.summary}</p>

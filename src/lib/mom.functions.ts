@@ -31,6 +31,11 @@ const ppSchema = z.object({
   requirement: z.string(),
   pending_with: z.enum(["okie_dokie", "client"]).default("okie_dokie"),
 });
+const photoSchema = z.object({
+  path: z.string().min(1),
+  url: z.string().min(1),
+  caption: z.string().optional(),
+});
 
 const momInputSchema = z.object({
   client_name: z.string().min(1).max(200),
@@ -43,7 +48,9 @@ const momInputSchema = z.object({
   discussion_points: z.array(dpSchema).default([]),
   work_completed: z.array(wcSchema).default([]),
   pending_points: z.array(ppSchema).default([]),
+  photos: z.array(photoSchema).default([]),
 });
+
 
 export const listMoms = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Plus,
   Sparkles,
@@ -8,6 +8,8 @@ import {
   MessagesSquare,
   ClipboardCheck,
   AlarmClockCheck,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateMomFromNotes } from "@/lib/mom.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   MODULES,
   ATTENDEE_TEAMS,
@@ -31,6 +34,7 @@ import {
   type MOMInput,
   type AttendeeTeam,
   type PendingWith,
+  type MomPhoto,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -51,7 +55,9 @@ const blank = (): MOMInput => ({
   discussion_points: [],
   work_completed: [],
   pending_points: [],
+  photos: [],
 });
+
 
 // Which sections the AI can regenerate
 type AiSection = "discussion_points" | "work_completed" | "pending_points";
@@ -265,6 +271,13 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         )}
       />
 
+      {/* Photos */}
+      <PhotosSection
+        photos={form.photos}
+        onChange={(v) => update("photos", v)}
+      />
+
+
       {/* Final submit */}
       <Button type="submit" disabled={submitting} size="lg" className="w-full gap-2 text-base">
         {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
@@ -376,3 +389,146 @@ function DynamicSection<T>({
     </Card>
   );
 }
+
+function PhotosSection({
+  photos,
+  onChange,
+}: {
+  photos: MomPhoto[];
+  onChange: (v: MomPhoto[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const added: MomPhoto[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) {
+          toast.error(`${file.name}: not an image`);
+          continue;
+        }
+        if (file.size > 8 * 1024 * 1024) {
+          toast.error(`${file.name}: exceeds 8MB`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("mom-photos")
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (upErr) {
+          toast.error(`${file.name}: ${upErr.message}`);
+          continue;
+        }
+        const { data: signed, error: sErr } = await supabase.storage
+          .from("mom-photos")
+          .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+        if (sErr || !signed) {
+          toast.error(`${file.name}: could not get URL`);
+          continue;
+        }
+        added.push({ path, url: signed.signedUrl });
+      }
+      if (added.length) {
+        onChange([...photos, ...added]);
+        toast.success(`Uploaded ${added.length} photo${added.length > 1 ? "s" : ""}`);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const remove = async (i: number) => {
+    const p = photos[i];
+    try {
+      await supabase.storage.from("mom-photos").remove([p.path]);
+    } catch {
+      /* ignore */
+    }
+    onChange(photos.filter((_, idx) => idx !== i));
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
+        <div className="flex-1 min-w-0">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ImagePlus className="h-4 w-4 text-primary" />
+            Photos
+          </CardTitle>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Attach photos from the visit (whiteboard notes, site pictures, screenshots). Max 8MB each.
+          </p>
+        </div>
+        <div className="shrink-0">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => void handleFiles(e.target.files)}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="gap-1.5"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            {uploading ? "Uploading…" : "Add Photos"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {photos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No photos yet.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {photos.map((p, i) => (
+              <div
+                key={p.path}
+                className="group relative overflow-hidden rounded-md border border-border bg-muted/20"
+              >
+                <img
+                  src={p.url}
+                  alt={p.caption || `Photo ${i + 1}`}
+                  className="aspect-square w-full object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => void remove(i)}
+                  className="absolute right-1.5 top-1.5 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100"
+                  aria-label="Remove photo"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+                <Input
+                  placeholder="Caption (optional)"
+                  value={p.caption ?? ""}
+                  onChange={(e) => {
+                    const copy = photos.slice();
+                    copy[i] = { ...p, caption: e.target.value };
+                    onChange(copy);
+                  }}
+                  className="h-8 rounded-none border-0 border-t border-border text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

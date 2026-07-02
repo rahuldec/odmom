@@ -71,6 +71,7 @@ function ListPage() {
     setDownloadingId(id);
     try {
       const mom = await get({ data: { id } });
+      if (!mom) throw new Error("MOM not found");
       await downloadMomPdf(mom);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to generate PDF");
@@ -78,6 +79,7 @@ function ListPage() {
       setDownloadingId(null);
     }
   };
+
 
   return (
     <AppShell>
