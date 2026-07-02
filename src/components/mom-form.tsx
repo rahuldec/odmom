@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Plus,
   Sparkles,
@@ -8,6 +8,8 @@ import {
   MessagesSquare,
   ClipboardCheck,
   AlarmClockCheck,
+  ImagePlus,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateMomFromNotes } from "@/lib/mom.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   MODULES,
   ATTENDEE_TEAMS,
@@ -31,6 +34,7 @@ import {
   type MOMInput,
   type AttendeeTeam,
   type PendingWith,
+  type MomPhoto,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -51,7 +55,9 @@ const blank = (): MOMInput => ({
   discussion_points: [],
   work_completed: [],
   pending_points: [],
+  photos: [],
 });
+
 
 // Which sections the AI can regenerate
 type AiSection = "discussion_points" | "work_completed" | "pending_points";
