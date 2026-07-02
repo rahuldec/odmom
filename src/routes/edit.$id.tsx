@@ -52,6 +52,8 @@ function EditPage() {
             discussion_points: mom.discussion_points,
             work_completed: mom.work_completed,
             pending_points: mom.pending_points,
+            photos: mom.photos ?? [],
+
           }}
           onSubmit={async (input: MOMInput) => {
             setBusy(true);
