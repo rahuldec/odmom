@@ -18,6 +18,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Link to="/">
               <Button variant="ghost" size="sm">All MOMs</Button>
             </Link>
+            <a href="https://odchecklist.lovable.app/" target="_blank" rel="noopener noreferrer">
+              <Button variant="ghost" size="sm">Checklist</Button>
+            </a>
             <Link to="/mom/new">
               <Button size="sm" className="gap-1.5">
                 <Plus className="h-4 w-4" /> New MOM
