@@ -53,12 +53,6 @@ function DetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("Delete this MOM?")) return;
-    await del({ data: { id } });
-    toast.success("Deleted");
-    router.navigate({ to: "/" });
-  };
 
   return (
     <AppShell>
