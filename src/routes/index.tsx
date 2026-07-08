@@ -32,7 +32,6 @@ export const Route = createFileRoute("/")({
 function ListPage() {
   const router = useRouter();
   const list = useServerFn(listMoms);
-  const del = useServerFn(deleteMom);
   const get = useServerFn(getMom);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
