@@ -172,9 +172,6 @@ function ListPage() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(m.id)} aria-label="Delete">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
