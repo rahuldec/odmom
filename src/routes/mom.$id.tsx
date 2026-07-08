@@ -77,9 +77,6 @@ function DetailPage() {
           <Link to="/edit/$id" params={{ id }}>
             <Button size="sm" className="gap-1.5"><Pencil className="h-4 w-4" /> Edit</Button>
           </Link>
-          <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
         </div>
       </div>
 
