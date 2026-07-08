@@ -50,7 +50,7 @@ function ListPage() {
     [search, client, employee, type],
   );
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["moms", filters],
     queryFn: () => list({ data: filters }),
   });
