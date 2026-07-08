@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Download, FileText, Pencil, Plus, Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { deleteMom, getMom, listMoms } from "@/lib/mom.functions";
+import { getMom, listMoms } from "@/lib/mom.functions";
 import { downloadMomPdf } from "@/lib/pdf";
 import { toast } from "sonner";
 
@@ -32,7 +32,6 @@ export const Route = createFileRoute("/")({
 function ListPage() {
   const router = useRouter();
   const list = useServerFn(listMoms);
-  const del = useServerFn(deleteMom);
   const get = useServerFn(getMom);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -51,21 +50,11 @@ function ListPage() {
     [search, client, employee, type],
   );
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["moms", filters],
     queryFn: () => list({ data: filters }),
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this MOM?")) return;
-    try {
-      await del({ data: { id } });
-      toast.success("MOM deleted");
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    }
-  };
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id);
@@ -172,9 +161,6 @@ function ListPage() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(m.id)} aria-label="Delete">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
                       </div>
                     </td>
                   </tr>
