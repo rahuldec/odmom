@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { deleteMom, getMom, listMoms } from "@/lib/mom.functions";
+import { getMom, listMoms } from "@/lib/mom.functions";
 import { downloadMomPdf } from "@/lib/pdf";
 import { toast } from "sonner";
 
