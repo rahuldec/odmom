@@ -55,16 +55,6 @@ function ListPage() {
     queryFn: () => list({ data: filters }),
   });
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this MOM?")) return;
-    try {
-      await del({ data: { id } });
-      toast.success("MOM deleted");
-      refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    }
-  };
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id);
