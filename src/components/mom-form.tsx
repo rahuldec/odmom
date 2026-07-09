@@ -222,7 +222,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       <DynamicSection
         title="Discussion Points"
         icon={MessagesSquare}
-        hint="Just write your thoughts roughly. The AI will improve and organize the wording for you."
+        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
         items={form.discussion_points}
         onChange={(v) => update("discussion_points", v)}
         addLabel="Add Point"
