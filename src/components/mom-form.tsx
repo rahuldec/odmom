@@ -241,7 +241,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       <DynamicSection
         title="Work Completed During Visit"
         icon={ClipboardCheck}
-        hint="Just write your thoughts roughly. The AI will improve and organize the wording for you."
+        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
         items={form.work_completed}
         onChange={(v) => update("work_completed", v)}
         addLabel="Add Task"
@@ -260,7 +260,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
       <DynamicSection
         title="Pending Points"
         icon={AlarmClockCheck}
-        hint="Just write your thoughts roughly. The AI will improve and organize the wording for you."
+        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
