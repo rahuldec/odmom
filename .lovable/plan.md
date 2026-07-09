@@ -1,56 +1,33 @@
-## Client Visit MOM Portal — MVP
+## Goal
+Users are missing the "Improve with AI" button on Discussion Points, Work Completed, and Pending Points sections — either because it looks like a secondary outline button tucked in the card header, or because its purpose isn't obvious.
 
-A public TanStack Start app for creating, viewing, and managing Minutes of Meeting, with AI-assisted generation and PDF export.
+## Changes (UI only, in `src/components/mom-form.tsx`)
 
-### Scope (MVP)
-- Create / edit / list / view MOMs (no auth gate — anyone can create)
-- Dynamic sections: Attendees, Discussion Points, Work Completed, Pending Points
-- AI MOM Generator from rough notes (Lovable AI / Gemini)
-- MOM detail page + PDF export + print
-- Search & filter (client, employee, meeting type, date range, keyword)
-- Light/dark mode, responsive corporate UI
+### 1. Make the button visually prominent
+Currently it's a small outline button next to "Add Point". Change to:
+- Filled primary style (gradient or solid `bg-primary text-primary-foreground`) with the Sparkles icon
+- Slightly larger (default size instead of `sm`) so it stands out from the neutral "Add" button
+- Subtle pulse/shimmer ring on first render to draw the eye
 
-### Out of scope (later)
-Auth & roles, email notifications, file attachments, dashboard analytics, action items module, rich-text editor (use plain textarea for MVP summary).
+### 2. Clarify what it does
+- Rename label from **"Improve with AI"** → **"✨ Auto-format with AI"** (clearer verb)
+- Update the section hint text from the generic "Just write your thoughts roughly..." to a stronger call-to-action:
+  > "💡 Tip: Type rough bullet points here, then click **Auto-format with AI** to turn them into clean, professional wording."
+- Add a small helper line directly under the button on first use: "Rewrites your rough notes into polished text."
 
-### Tech
-- Lovable Cloud (Supabase) for database
-- Lovable AI Gateway (`google/gemini-2.5-flash`) via a `createServerFn` for AI generation
-- `jspdf` + `jspdf-autotable` for client-side PDF
-- shadcn/ui components, Tailwind, dark mode toggle
+### 3. Add an inline empty-state nudge
+When a section has 1+ rough items but hasn't been AI-polished yet, show a dashed callout row:
+> ✨ Ready to polish? Click **Auto-format with AI** above to clean up your wording.
 
-### Data model
-```text
-moms
-  id uuid pk, created_at, updated_at
-  client_name text, meeting_date date, meeting_type text (online|offline)
-  employee_name text, location text, summary text
-  attendees jsonb        [{name, designation, mobile}]
-  discussion_points jsonb [{module, details}]
-  work_completed jsonb    [{module, task}]
-  pending_points jsonb    [{module, requirement, priority}]
-```
-Public RLS: SELECT/INSERT/UPDATE for `anon` + `authenticated` (per user's "public" choice). Grants for anon/authenticated/service_role.
+### 4. Tooltip on hover
+Wrap the button in a shadcn `Tooltip` explaining: "Sends your rough notes to AI and rewrites them into clear, professional MOM language. Your points stay — only the wording improves."
 
-### Routes
-- `/` — MOM list with search + filters, "New MOM" button
-- `/mom/new` — create form (with AI generator panel)
-- `/mom/$id` — detail view (Edit / Download PDF / Print)
-- `/mom/$id/edit` — edit form
+## Out of scope
+- No changes to the AI server function, prompt, or data model
+- No changes to Attendees/Photos/Meeting Info sections
+- No onboarding modal / product tour
 
-### Server functions (`src/lib/mom.functions.ts`)
-- `listMoms({ filters })`, `getMom({id})`, `createMom`, `updateMom`, `deleteMom`
-- `generateMomFromNotes({notes})` → Lovable AI returns `{discussion_points, work_completed, pending_points, summary}` via structured output
+## Files touched
+- `src/components/mom-form.tsx` (only)
 
-### Design
-Clean corporate CRM look: slate neutrals + indigo primary accent, generous spacing, rounded-md cards, sidebar-free top-nav layout. Full dark mode via class toggle persisted to localStorage.
-
-### Build order
-1. Enable Lovable Cloud + migration for `moms` table
-2. Server functions (CRUD + AI generator)
-3. List page with filters
-4. Create/Edit form with dynamic row sections + AI panel
-5. Detail page + PDF generator
-6. Theme toggle + polish
-
-Confirm to proceed.
+Confirm and I'll implement.
