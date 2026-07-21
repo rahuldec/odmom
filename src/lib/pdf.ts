@@ -237,6 +237,8 @@ export async function downloadMomPdf(mom: MOM) {
   };
 
   const teamBadge = (team: "okie_dokie" | "client") => (team === "okie_dokie" ? "Okie Dokie Team" : "Client");
+  const pendingLabel = (p: "okie_dokie" | "client" | "sample_from_customer") =>
+    p === "okie_dokie" ? "Okie Dokie Team" : p === "client" ? "Client" : "Sample from Customer";
 
   // ── Meeting Information ───────────────────────────────────────────────
   section("Meeting Information");
