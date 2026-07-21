@@ -146,11 +146,28 @@ function DetailPage() {
           <Section title="Pending Points">
             <ul className="divide-y divide-border">
               {mom.pending_points.map((p, i) => (
-                <li key={i} className="flex items-start gap-4 px-3 py-3">
+                <li key={i} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-start sm:gap-4">
                   <Badge variant="outline" className="h-fit shrink-0">{p.module}</Badge>
-                  <p className="flex-1 text-sm leading-relaxed">{p.requirement}</p>
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm leading-relaxed">{p.requirement}</p>
+                    {p.attachments && p.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {p.attachments.map((a) => (
+                          <a
+                            key={a.path}
+                            href={a.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-foreground hover:bg-muted"
+                          >
+                            📎 {a.name || "Attachment"}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <span className="h-fit shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : p.pending_with === "sample_from_customer" ? "Sample from Customer" : "Client"}
+                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client"}
                   </span>
                 </li>
               ))}

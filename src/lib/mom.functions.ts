@@ -29,7 +29,17 @@ const wcSchema = z.object({ module: z.string(), task: z.string() });
 const ppSchema = z.object({
   module: z.string(),
   requirement: z.string(),
-  pending_with: z.enum(["okie_dokie", "client", "sample_from_customer"]).default("okie_dokie"),
+  pending_with: z.enum(["okie_dokie", "client"]).default("okie_dokie"),
+  attachments: z
+    .array(
+      z.object({
+        path: z.string().min(1),
+        url: z.string().min(1),
+        name: z.string().optional(),
+      }),
+    )
+    .optional()
+    .default([]),
 });
 const photoSchema = z.object({
   path: z.string().min(1),
@@ -148,7 +158,7 @@ type AiOut = {
   pending_points: {
     module: string;
     requirement: string;
-    pending_with: "okie_dokie" | "client" | "sample_from_customer";
+    pending_with: "okie_dokie" | "client";
   }[];
   summary: string;
 };
@@ -179,11 +189,11 @@ Return STRICT JSON matching this shape:
 {
   "discussion_points": [{ "module": <one of ${modules.join(", ")}>, "details": string }],
   "work_completed":    [{ "module": <one of ${modules.join(", ")}>, "task": string }],
-  "pending_points":    [{ "module": <one of ${modules.join(", ")}>, "requirement": string, "pending_with": "okie_dokie"|"client"|"sample_from_customer" }],
+  "pending_points":    [{ "module": <one of ${modules.join(", ")}>, "requirement": string, "pending_with": "okie_dokie"|"client" }],
   "summary": string
 }
 - Infer the right module per item. Use "Other" if unclear.
-- For each pending point, set "pending_with" to "okie_dokie" if the Okie Dokie team needs to act, "client" if the school/institute needs to act, or "sample_from_customer" if a physical sample/document/data is awaited from the customer.
+- For each pending point, set "pending_with" to "okie_dokie" if the Okie Dokie team needs to act on it, or "client" if the school/institute needs to act on it.
 - Summary should be 2-4 sentences covering key outcomes and next steps.`;
 
     const resp = await fetch(

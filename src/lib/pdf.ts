@@ -237,8 +237,6 @@ export async function downloadMomPdf(mom: MOM) {
   };
 
   const teamBadge = (team: "okie_dokie" | "client") => (team === "okie_dokie" ? "Okie Dokie Team" : "Client");
-  const pendingLabel = (p: "okie_dokie" | "client" | "sample_from_customer") =>
-    p === "okie_dokie" ? "Okie Dokie Team" : p === "client" ? "Client" : "Sample from Customer";
 
   // ── Meeting Information ───────────────────────────────────────────────
   section("Meeting Information");
@@ -375,7 +373,7 @@ export async function downloadMomPdf(mom: MOM) {
     autoTable(doc, {
       startY: y,
       head: [["Module", "Requirement", "Pending With"]],
-      body: mom.pending_points.map((p) => [p.module, p.requirement, pendingLabel(p.pending_with)]),
+      body: mom.pending_points.map((p) => [p.module, p.requirement, teamBadge(p.pending_with)]),
       columnStyles: {
         0: { cellWidth: 100, fontStyle: "bold" },
         2: { cellWidth: 110, halign: "center" },
