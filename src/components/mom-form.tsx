@@ -41,6 +41,7 @@ import {
   type AttendeeTeam,
   type PendingWith,
   type MomPhoto,
+  type PendingAttachment,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -264,19 +265,25 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
-        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith }}
+        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith, attachments: [] }}
         aiLoading={aiLoading === "pending_points"}
         onAiPolish={() => handleGenerate("pending_points")}
         render={(p, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
-            <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
-            <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
-            <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
+              <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
+              <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
+              <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <PendingAttachments
+              value={p.attachments ?? []}
+              onChange={(next) => set({ ...p, attachments: next })}
+            />
           </div>
         )}
       />
