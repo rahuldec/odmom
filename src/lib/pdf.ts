@@ -375,7 +375,7 @@ export async function downloadMomPdf(mom: MOM) {
     autoTable(doc, {
       startY: y,
       head: [["Module", "Requirement", "Pending With"]],
-      body: mom.pending_points.map((p) => [p.module, p.requirement, teamBadge(p.pending_with)]),
+      body: mom.pending_points.map((p) => [p.module, p.requirement, pendingLabel(p.pending_with)]),
       columnStyles: {
         0: { cellWidth: 100, fontStyle: "bold" },
         2: { cellWidth: 110, halign: "center" },
