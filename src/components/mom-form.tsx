@@ -41,6 +41,7 @@ import {
   type AttendeeTeam,
   type PendingWith,
   type MomPhoto,
+  type PendingAttachment,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -264,19 +265,25 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
-        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith }}
+        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith, attachments: [] }}
         aiLoading={aiLoading === "pending_points"}
         onAiPolish={() => handleGenerate("pending_points")}
         render={(p, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
-            <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
-            <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
-            <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
+              <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
+              <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
+              <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <PendingAttachments
+              value={p.attachments ?? []}
+              onChange={(next) => set({ ...p, attachments: next })}
+            />
           </div>
         )}
       />
@@ -554,5 +561,116 @@ function PhotosSection({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function PendingAttachments({
+  value,
+  onChange,
+}: {
+  value: PendingAttachment[];
+  onChange: (v: PendingAttachment[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const added: PendingAttachment[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 15 * 1024 * 1024) {
+          toast.error(`${file.name}: exceeds 15MB`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `pending/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("mom-photos")
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (upErr) {
+          toast.error(`${file.name}: ${upErr.message}`);
+          continue;
+        }
+        const { data: signed, error: sErr } = await supabase.storage
+          .from("mom-photos")
+          .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+        if (sErr || !signed) {
+          toast.error(`${file.name}: could not get URL`);
+          continue;
+        }
+        added.push({ path, url: signed.signedUrl, name: file.name });
+      }
+      if (added.length) {
+        onChange([...value, ...added]);
+        toast.success(`Attached ${added.length} file${added.length > 1 ? "s" : ""}`);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const remove = async (i: number) => {
+    const a = value[i];
+    try {
+      await supabase.storage.from("mom-photos").remove([a.path]);
+    } catch {
+      /* ignore */
+    }
+    onChange(value.filter((_, idx) => idx !== i));
+  };
+
+  return (
+    <div className="rounded-md border border-dashed border-border bg-background/40 p-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => void handleFiles(e.target.files)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="h-7 gap-1.5 text-xs"
+        >
+          {uploading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <ImagePlus className="h-3 w-3" />
+          )}
+          {uploading ? "Uploading…" : "Attach sample from client"}
+        </Button>
+        {value.length === 0 && (
+          <span className="text-xs text-muted-foreground">
+            Optional — attach a file/sample received from the client for this pending item.
+          </span>
+        )}
+        {value.map((a, i) => (
+          <span
+            key={a.path}
+            className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+          >
+            <a href={a.url} target="_blank" rel="noreferrer" className="max-w-[180px] truncate hover:underline">
+              📎 {a.name || "file"}
+            </a>
+            <button
+              type="button"
+              onClick={() => void remove(i)}
+              className="text-muted-foreground hover:text-destructive"
+              aria-label="Remove attachment"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
