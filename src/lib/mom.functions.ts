@@ -29,7 +29,7 @@ const wcSchema = z.object({ module: z.string(), task: z.string() });
 const ppSchema = z.object({
   module: z.string(),
   requirement: z.string(),
-  pending_with: z.enum(["okie_dokie", "client"]).default("okie_dokie"),
+  pending_with: z.enum(["okie_dokie", "client", "sample_from_customer"]).default("okie_dokie"),
 });
 const photoSchema = z.object({
   path: z.string().min(1),

@@ -150,7 +150,7 @@ function DetailPage() {
                   <Badge variant="outline" className="h-fit shrink-0">{p.module}</Badge>
                   <p className="flex-1 text-sm leading-relaxed">{p.requirement}</p>
                   <span className="h-fit shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client"}
+                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : p.pending_with === "sample_from_customer" ? "Sample from Customer" : "Client"}
                   </span>
                 </li>
               ))}
