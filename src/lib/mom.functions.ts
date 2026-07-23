@@ -97,6 +97,17 @@ export const listMoms = createServerFn({ method: "GET" })
     return (rows ?? []) as unknown as MOM[];
   });
 
+export const countMoms = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({}).parse(input ?? {}))
+  .handler(async (): Promise<number> => {
+    const supa = getSupa();
+    const { count, error } = await supa
+      .from("moms")
+      .select("*", { count: "exact", head: true });
+    if (error) throw new Error(error.message);
+    return count ?? 0;
+  });
+
 export const getMom = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z.object({ id: z.string().uuid() }).parse(input),
