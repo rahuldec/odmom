@@ -136,7 +136,13 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
           next.work_completed = r.work_completed;
         }
         if (section === "pending_points") {
-          next.pending_points = r.pending_points;
+          // The AI only rewrites module/requirement/pending_with text — it never
+          // sees or returns attachments. Re-attach the original files by index
+          // so "Auto-format with AI" doesn't wipe out client sample uploads.
+          next.pending_points = r.pending_points.map((pp, i) => ({
+            ...pp,
+            attachments: f.pending_points[i]?.attachments ?? pp.attachments ?? [],
+          }));
         }
         return next;
       });
