@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Download, FileText, Pencil, Plus, Search } from "lucide-react";
+import { Download, FileText, ImageIcon, Pencil, Plus, Search } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,12 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { getMom, listMoms } from "@/lib/mom.functions";
+import type { MomPhoto } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
 import { toast } from "sonner";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
