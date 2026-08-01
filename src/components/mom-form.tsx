@@ -141,7 +141,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
           // so "Auto-format with AI" doesn't wipe out client sample uploads.
           next.pending_points = r.pending_points.map((pp, i) => ({
             ...pp,
-            attachments: f.pending_points[i]?.attachments ?? pp.attachments ?? [],
+            attachments: f.pending_points[i]?.attachments ?? [],
           }));
         }
         return next;
