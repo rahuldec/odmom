@@ -37,6 +37,7 @@ function ListPage() {
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<{ title: string; photos: MomPhoto[] } | null>(null);
 
   const [search, setSearch] = useState("");
   const [client, setClient] = useState("");
