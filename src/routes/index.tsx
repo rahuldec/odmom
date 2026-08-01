@@ -128,6 +128,7 @@ function ListPage() {
                   <th className="px-4 py-3">Type</th>
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Photos</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -147,6 +148,12 @@ function ListPage() {
                     </td>
                     <td className="px-4 py-3">{m.employee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{m.location || "—"}</td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <PhotoStack
+                        photos={(m.photos ?? []) as MomPhoto[]}
+                        onOpen={() => setGallery({ title: m.client_name, photos: (m.photos ?? []) as MomPhoto[] })}
+                      />
+                    </td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Button
