@@ -76,7 +76,7 @@ function ListPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-6 flex flex-col items-center gap-4 text-center">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Minutes of Meeting</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -84,9 +84,15 @@ function ListPage() {
           </p>
         </div>
         <Link to="/mom/new">
-          <Button className="gap-1.5"><Plus className="h-4 w-4" /> New MOM</Button>
+          <Button
+            size="lg"
+            className="gap-2 bg-gradient-to-r from-primary to-primary/80 px-8 text-base font-semibold shadow-lg shadow-primary/30 ring-2 ring-primary/25 transition-transform hover:scale-[1.03]"
+          >
+            <Plus className="h-5 w-5" /> New MOM
+          </Button>
         </Link>
       </div>
+
 
       <Card className="mb-6 p-4">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
