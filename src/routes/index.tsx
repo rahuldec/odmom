@@ -183,27 +183,27 @@ function ListPage() {
       )}
 
       <Dialog open={!!gallery} onOpenChange={(o) => !o && setGallery(null)}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden">
           <DialogHeader>
             <DialogTitle>{gallery?.title} — Photos</DialogTitle>
           </DialogHeader>
-          <div className="grid max-h-[70vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
+          <div className="-mr-2 grid max-h-[76vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2">
             {gallery?.photos.map((p) => (
               <a
                 key={p.path}
                 href={p.url}
                 target="_blank"
                 rel="noreferrer"
-                className="group overflow-hidden rounded-lg border border-border bg-muted"
+                className="group overflow-hidden rounded-xl border border-border bg-muted shadow-sm"
               >
                 <img
                   src={p.url}
                   alt={p.caption || "MOM photo"}
                   loading="lazy"
-                  className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-72 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-80"
                 />
                 {p.caption ? (
-                  <p className="truncate px-2 py-1.5 text-xs text-muted-foreground">{p.caption}</p>
+                  <p className="truncate px-3 py-2 text-xs text-muted-foreground">{p.caption}</p>
                 ) : null}
               </a>
             ))}
