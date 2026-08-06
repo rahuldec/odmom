@@ -425,6 +425,17 @@ function DynamicSection<T>({
             </Button>
           </div>
         ))}
+        {bottomAddLabel && (
+          <Button
+            type="button"
+            variant="dashed"
+            size="sm"
+            onClick={() => onChange([...items, structuredClone(empty)])}
+            className="w-full gap-1.5 border-dashed"
+          >
+            <Plus className="h-3.5 w-3.5" /> {bottomAddLabel}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
