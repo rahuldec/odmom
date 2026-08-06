@@ -428,10 +428,10 @@ function DynamicSection<T>({
         {bottomAddLabel && (
           <Button
             type="button"
-            variant="dashed"
+            variant="outline"
             size="sm"
             onClick={() => onChange([...items, structuredClone(empty)])}
-            className="w-full gap-1.5 border-dashed"
+            className="w-full gap-1.5 border-dashed hover:bg-muted/50"
           >
             <Plus className="h-3.5 w-3.5" /> {bottomAddLabel}
           </Button>
