@@ -271,6 +271,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
+        bottomAddLabel="Add another pending point"
         empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith, attachments: [] }}
         aiLoading={aiLoading === "pending_points"}
         onAiPolish={() => handleGenerate("pending_points")}
