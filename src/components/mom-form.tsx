@@ -332,7 +332,7 @@ function ModuleSelect({ value, onChange }: { value: string; onChange: (v: string
 }
 
 function DynamicSection<T>({
-  title, icon: Icon, hint, items, onChange, render, empty, addLabel, aiLoading, onAiPolish,
+  title, icon: Icon, hint, items, onChange, render, empty, addLabel, bottomAddLabel, aiLoading, onAiPolish,
 }: {
   title: string;
   icon?: React.ComponentType<{ className?: string }>;
@@ -342,6 +342,7 @@ function DynamicSection<T>({
   render: (item: T, set: (next: T) => void) => React.ReactNode;
   empty: T;
   addLabel: string;
+  bottomAddLabel?: string;
   aiLoading?: boolean;
   onAiPolish?: () => void;
 }) {
