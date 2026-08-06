@@ -271,6 +271,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         items={form.pending_points}
         onChange={(v) => update("pending_points", v)}
         addLabel="Add Pending Item"
+        bottomAddLabel="Add another pending point"
         empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith, attachments: [] }}
         aiLoading={aiLoading === "pending_points"}
         onAiPolish={() => handleGenerate("pending_points")}
@@ -331,7 +332,7 @@ function ModuleSelect({ value, onChange }: { value: string; onChange: (v: string
 }
 
 function DynamicSection<T>({
-  title, icon: Icon, hint, items, onChange, render, empty, addLabel, aiLoading, onAiPolish,
+  title, icon: Icon, hint, items, onChange, render, empty, addLabel, bottomAddLabel, aiLoading, onAiPolish,
 }: {
   title: string;
   icon?: React.ComponentType<{ className?: string }>;
@@ -341,6 +342,7 @@ function DynamicSection<T>({
   render: (item: T, set: (next: T) => void) => React.ReactNode;
   empty: T;
   addLabel: string;
+  bottomAddLabel?: string;
   aiLoading?: boolean;
   onAiPolish?: () => void;
 }) {
@@ -423,6 +425,17 @@ function DynamicSection<T>({
             </Button>
           </div>
         ))}
+        {bottomAddLabel && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onChange([...items, structuredClone(empty)])}
+            className="w-full gap-1.5 border-dashed hover:bg-muted/50"
+          >
+            <Plus className="h-3.5 w-3.5" /> {bottomAddLabel}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
