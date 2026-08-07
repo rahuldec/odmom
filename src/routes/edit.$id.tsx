@@ -62,7 +62,7 @@ function EditPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">
             It may have been deleted by someone else on the team.
           </p>
-          <Link to="/" className="mt-5 inline-block">
+          <Link to="/meetings" className="mt-5 inline-block">
             <Button variant="outline">Go to all meetings</Button>
           </Link>
         </Card>

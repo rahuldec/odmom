@@ -56,7 +56,7 @@ function NotFoundComponent() {
       body="That link doesn't lead anywhere. The MOM may have been deleted, or the address is mistyped."
       actions={
         <Link
-          to="/"
+          to="/meetings"
           className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
         >
           Go to all meetings
@@ -90,7 +90,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             Try again
           </button>
           <a
-            href="/"
+            href="/meetings"
             className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             Go to all meetings

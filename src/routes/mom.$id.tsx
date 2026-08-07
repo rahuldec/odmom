@@ -52,7 +52,7 @@ function DetailPage() {
           <p className="mt-1.5 text-sm text-muted-foreground">
             It may have been deleted by someone else on the team.
           </p>
-          <Link to="/" className="mt-5 inline-block">
+          <Link to="/meetings" className="mt-5 inline-block">
             <Button variant="outline">Go to all meetings</Button>
           </Link>
         </Card>
@@ -93,7 +93,7 @@ function DetailPage() {
   return (
     <AppShell>
       <div data-print-hide className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <Link to="/">
+        <Link to="/meetings">
           <Button variant="ghost" size="sm" className="-ml-2 gap-1 text-muted-foreground">
             <ArrowLeft className="h-4 w-4" /> All meetings
           </Button>

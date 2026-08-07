@@ -1,526 +1,439 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
 import {
-  ArrowUpDown,
-  Clock3,
-  Download,
-  Images,
-  Loader2,
-  Pencil,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { AppShell, PageHeader } from "@/components/app-shell";
-import { Seal } from "@/components/seal";
-import { MeetingTypeChip } from "@/components/chips";
+import { ModuleChip } from "@/components/chips";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { getMom, listMoms } from "@/lib/mom.functions";
-import type { MOM, MomPhoto } from "@/lib/mom-types";
-import { downloadMomPdf } from "@/lib/pdf";
-import { formatDay, plural, relativeDay } from "@/lib/format";
-import { toast } from "sonner";
+import { listMoms } from "@/lib/mom.functions";
+import type { MOM } from "@/lib/mom-types";
+import { monthKey, plural, relativeDay } from "@/lib/format";
+import { visitsByEmployee, type EmployeeVisits } from "@/lib/people";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "All meetings — MOM Portal" },
+      { title: "Dashboard — MOM Portal" },
       {
         name: "description",
-        content:
-          "Create and manage Minutes of Meeting for client visits, training, and support calls.",
+        content: "Meetings recorded, visits per team member, and what's still pending.",
       },
+      { property: "og:title", content: "Dashboard — MOM Portal" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: ListPage,
+  component: DashboardPage,
 });
 
-type SortKey = "date_desc" | "date_asc" | "client_asc" | "pending_desc";
-
-function useDebounced<T>(value: T, delay = 300): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
-}
-
-function ListPage() {
-  const router = useRouter();
+function DashboardPage() {
   const list = useServerFn(listMoms);
-  const get = useServerFn(getMom);
-
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [gallery, setGallery] = useState<{ title: string; photos: MomPhoto[] } | null>(null);
-
-  const [search, setSearch] = useState("");
-  const [client, setClient] = useState("");
-  const [employee, setEmployee] = useState("");
-  const [type, setType] = useState<"all" | "online" | "offline">("all");
-  const [sort, setSort] = useState<SortKey>("date_desc");
-  const [showFilters, setShowFilters] = useState(false);
-
-  const debouncedSearch = useDebounced(search);
-  const debouncedClient = useDebounced(client);
-  const debouncedEmployee = useDebounced(employee);
-
-  const filters = useMemo(
-    () => ({
-      search: debouncedSearch || undefined,
-      client: debouncedClient || undefined,
-      employee: debouncedEmployee || undefined,
-      meeting_type: type === "all" ? undefined : type,
-    }),
-    [debouncedSearch, debouncedClient, debouncedEmployee, type],
-  );
-
-  const hasFilters = Boolean(
-    debouncedSearch || debouncedClient || debouncedEmployee || type !== "all",
-  );
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["moms", filters],
-    queryFn: () => list({ data: filters }),
+    queryKey: ["moms", {}],
+    queryFn: () => list({ data: {} }),
   });
 
-  const rows = useMemo(() => {
-    const items = [...(data ?? [])];
-    const pending = (m: MOM) => (m.pending_points ?? []).length;
-    switch (sort) {
-      case "date_asc":
-        return items.sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
-      case "client_asc":
-        return items.sort((a, b) => a.client_name.localeCompare(b.client_name));
-      case "pending_desc":
-        return items.sort((a, b) => pending(b) - pending(a));
-      default:
-        return items.sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
-    }
-  }, [data, sort]);
+  const stats = useMemo(() => summarise(data ?? []), [data]);
 
-  const clearFilters = () => {
-    setSearch("");
-    setClient("");
-    setEmployee("");
-    setType("all");
-  };
-
-  const handleDownload = async (id: string) => {
-    setDownloadingId(id);
-    try {
-      const mom = await get({ data: { id } });
-      if (!mom) throw new Error("This MOM no longer exists.");
-      await downloadMomPdf(mom);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't build the PDF. Try again.");
-    } finally {
-      setDownloadingId(null);
-    }
-  };
+  const [period, setPeriod] = useState<PeriodKey>("all");
+  const team = useMemo(
+    () => visitsByEmployee(withinPeriod(data ?? [], period)),
+    [data, period],
+  );
+  const creditedVisits = useMemo(() => team.reduce((n, t) => n + t.visits, 0), [team]);
 
   return (
     <AppShell>
       <PageHeader
-        eyebrow="Client record"
-        title="Meetings"
-        description="Every client visit, training session, and support call — written up, stamped, and ready to send."
+        eyebrow="Overview"
+        title="Dashboard"
+        description="What's been recorded, who's been out there, and what's still waiting on someone."
         actions={
-          <Link to="/mom/new">
-            <Button className="gap-1.5 font-semibold">
-              <Plus className="h-4 w-4" /> New MOM
+          <Link to="/meetings">
+            <Button variant="outline" className="gap-1.5">
+              All meetings <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
         }
       />
 
-      {/* Search + filters */}
-      <div className="mb-5 space-y-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="h-11 pl-9"
-              placeholder="Search client, employee, location or conclusion…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search meetings"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:bg-muted"
-                aria-label="Clear search"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <Button
-            variant={showFilters ? "secondary" : "outline"}
-            className="h-11 gap-1.5"
-            onClick={() => setShowFilters((v) => !v)}
-            aria-expanded={showFilters}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            <span className="hidden sm:inline">Filters</span>
-          </Button>
-        </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-3">
-            <Input
-              placeholder="Client name"
-              value={client}
-              onChange={(e) => setClient(e.target.value)}
-              aria-label="Filter by client"
-            />
-            <Input
-              placeholder="Employee name"
-              value={employee}
-              onChange={(e) => setEmployee(e.target.value)}
-              aria-label="Filter by employee"
-            />
-            <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
-              <SelectTrigger aria-label="Filter by meeting type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All meeting types</SelectItem>
-                <SelectItem value="offline">On site</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p className="eyebrow">
-            {isLoading ? "Loading…" : plural(rows.length, "meeting")}
-            {hasFilters && !isLoading ? " found" : ""}
-          </p>
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              <X className="h-3 w-3" /> Clear filters
-            </button>
-          )}
-          <div className="ml-auto flex items-center gap-2">
-            <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
-            <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-              <SelectTrigger className="h-8 w-[168px] border-none bg-transparent text-xs shadow-none">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="date_desc">Newest first</SelectItem>
-                <SelectItem value="date_asc">Oldest first</SelectItem>
-                <SelectItem value="client_asc">Client A–Z</SelectItem>
-                <SelectItem value="pending_desc">Most pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
       {isLoading ? (
-        <ListSkeleton />
-      ) : rows.length === 0 ? (
-        <EmptyState filtered={hasFilters} onClear={clearFilters} />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-5">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="mt-4 h-9 w-16" />
+            </Card>
+          ))}
+        </div>
       ) : (
         <>
-          {/* Desktop */}
-          <Card className="hidden overflow-hidden md:block">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/60">
-                <tr className="eyebrow">
-                  <th className="px-5 py-3 text-left font-medium">Client</th>
-                  <th className="px-5 py-3 text-left font-medium">Date</th>
-                  <th className="px-5 py-3 text-left font-medium">Type</th>
-                  <th className="px-5 py-3 text-left font-medium">Employee</th>
-                  <th className="px-5 py-3 text-left font-medium">Pending</th>
-                  <th className="px-5 py-3 text-left font-medium">Photos</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((m) => (
-                  <tr
-                    key={m.id}
-                    tabIndex={0}
-                    role="link"
-                    onClick={() => router.navigate({ to: "/mom/$id", params: { id: m.id } })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter")
-                        router.navigate({ to: "/mom/$id", params: { id: m.id } });
-                    }}
-                    className="cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-secondary/60 focus-visible:bg-secondary/60"
-                  >
-                    <td className="px-5 py-4">
-                      <span className="font-medium">{m.client_name}</span>
-                      {m.location && (
-                        <span className="mt-0.5 block max-w-[22ch] truncate text-xs text-muted-foreground">
-                          {m.location}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="tabular text-sm">{formatDay(m.meeting_date)}</span>
-                      <span className="mt-0.5 block text-xs text-muted-foreground">
-                        {relativeDay(m.meeting_date)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <MeetingTypeChip type={m.meeting_type} />
-                    </td>
-                    <td className="px-5 py-4">{m.employee_name}</td>
-                    <td className="px-5 py-4">
-                      <PendingCount count={(m.pending_points ?? []).length} />
-                    </td>
-                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                      <PhotoStack
-                        photos={(m.photos ?? []) as MomPhoto[]}
-                        onOpen={() =>
-                          setGallery({
-                            title: m.client_name,
-                            photos: (m.photos ?? []) as MomPhoto[],
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <RowActions
-                        id={m.id}
-                        downloading={downloadingId === m.id}
-                        onDownload={() => void handleDownload(m.id)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              icon={FileText}
+              label="Meetings recorded"
+              value={stats.total}
+              caption="all time"
+            />
+            <Stat
+              icon={CalendarDays}
+              label="This month"
+              value={stats.thisMonth}
+              caption={stats.lastMonth > 0 ? `${stats.lastMonth} last month` : "first month"}
+            />
+            <Stat
+              icon={Building2}
+              label="Clients covered"
+              value={stats.clients}
+              caption="distinct institutes"
+            />
+            <Stat
+              icon={Clock3}
+              label="Open pending items"
+              value={stats.pendingTotal}
+              caption={`${stats.pendingOurs} on us · ${stats.pendingTheirs} on clients`}
+              highlight={stats.pendingOurs > 0}
+            />
+          </div>
 
-          {/* Mobile */}
-          <div className="space-y-3 md:hidden">
-            {rows.map((m) => (
-              <Card key={m.id} className="overflow-hidden">
-                <Link
-                  to="/mom/$id"
-                  params={{ id: m.id }}
-                  className="block p-4 transition-colors hover:bg-secondary/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-display text-base font-semibold">
-                        {m.client_name}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        <span className="tabular">{formatDay(m.meeting_date)}</span> ·{" "}
-                        {m.employee_name}
-                      </p>
-                    </div>
-                    <MeetingTypeChip type={m.meeting_type} className="shrink-0" />
+          <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+            {/* Visits per team member — a joint visit counts for everyone on it. */}
+            <Card className="overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                <div>
+                  <h2 className="font-display text-base font-semibold">Visits by team member</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    A visit made together counts for everyone who was on it.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1">
+                  {PERIODS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPeriod(p.value)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        period === p.value
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {team.length === 0 ? (
+                <p className="px-5 py-16 text-center text-sm text-muted-foreground">
+                  No visits recorded in this period.
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-center gap-4 px-5 pt-4 text-xs text-muted-foreground">
+                    <LegendKey color="var(--color-primary)" label="On site" />
+                    <LegendKey color="var(--color-chart-2)" label="Online" />
                   </div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <PendingCount count={(m.pending_points ?? []).length} />
-                    {(m.photos ?? []).length > 0 && (
-                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <Images className="h-3.5 w-3.5" />
-                        {(m.photos ?? []).length}
-                      </span>
+                  <div
+                    className="px-2 pb-4 pt-2"
+                    style={{ height: Math.max(220, team.length * 42 + 40) }}
+                  >
+                    {mounted && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={team}
+                          layout="vertical"
+                          barSize={18}
+                          margin={{ top: 4, right: 28, bottom: 0, left: 4 }}
+                        >
+                          <CartesianGrid horizontal={false} stroke="var(--color-border)" />
+                          <XAxis
+                            type="number"
+                            allowDecimals={false}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={132}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fontSize: 12, fill: "var(--color-foreground)" }}
+                          />
+                          <Tooltip
+                            cursor={{ fill: "var(--color-muted)" }}
+                            content={<VisitTooltip />}
+                          />
+                          <Bar dataKey="onsite" name="On site" stackId="v">
+                            {team.map((t) => (
+                              <Cell key={t.key} fill="var(--color-primary)" />
+                            ))}
+                          </Bar>
+                          <Bar dataKey="online" name="Online" stackId="v" radius={[0, 4, 4, 0]}>
+                            {team.map((t) => (
+                              <Cell key={t.key} fill="var(--color-chart-2)" />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
                     )}
                   </div>
-                </Link>
-                <div className="flex items-center justify-end gap-1 border-t border-border px-2 py-1.5">
-                  <RowActions
-                    id={m.id}
-                    downloading={downloadingId === m.id}
-                    onDownload={() => void handleDownload(m.id)}
-                  />
-                </div>
-              </Card>
-            ))}
+                  <div className="border-t border-border bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">
+                    {plural(creditedVisits, "credited visit")} across{" "}
+                    {plural(team.length, "team member")} — counted from the recorder plus every
+                    attendee tagged as Okie Dokie team.
+                  </div>
+                </>
+              )}
+            </Card>
+
+            {/* Pending by module */}
+            <Card className="overflow-hidden">
+              <div className="border-b border-border px-5 py-3.5">
+                <h2 className="font-display text-base font-semibold">Pending by module</h2>
+              </div>
+              {stats.byModule.length === 0 ? (
+                <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  Nothing pending anywhere.
+                </p>
+              ) : (
+                <ul className="space-y-3 p-5">
+                  {stats.byModule.slice(0, 8).map((m) => (
+                    <li key={m.module}>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <ModuleChip module={m.module} />
+                        <span className="tabular text-xs text-muted-foreground">{m.count}</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          data-module={m.module}
+                          className="h-full rounded-full"
+                          style={{
+                            width: `${Math.round((m.count / stats.byModule[0].count) * 100)}%`,
+                            background: "var(--chip)",
+                          }}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
           </div>
+
+          {/* Meetings over time */}
+          <Card className="mt-5 overflow-hidden">
+            <div className="border-b border-border px-5 py-3.5">
+              <h2 className="font-display text-base font-semibold">Meetings per month</h2>
+            </div>
+            <div className="h-64 p-5">
+              {mounted && stats.byMonth.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.byMonth} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
+                    <CartesianGrid vertical={false} stroke="var(--color-border)" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "var(--color-muted)" }}
+                      contentStyle={{
+                        background: "var(--color-card)",
+                        border: "1px solid var(--color-border)",
+                        borderRadius: 12,
+                        fontSize: 12,
+                      }}
+                    />
+                    <Bar dataKey="count" name="Meetings" radius={[6, 6, 0, 0]}>
+                      {stats.byMonth.map((entry) => (
+                        <Cell key={entry.label} fill="var(--color-primary)" />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No meetings recorded yet.
+                </div>
+              )}
+            </div>
+          </Card>
         </>
       )}
-
-      {/* Photo gallery */}
-      <Dialog open={!!gallery} onOpenChange={(o) => !o && setGallery(null)}>
-        <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="font-display">{gallery?.title} — photos</DialogTitle>
-          </DialogHeader>
-          <div className="-mr-2 grid max-h-[76vh] grid-cols-1 gap-4 overflow-y-auto pr-2 sm:grid-cols-2">
-            {gallery?.photos.map((p) => (
-              <a
-                key={p.path}
-                href={p.url}
-                target="_blank"
-                rel="noreferrer"
-                className="group overflow-hidden rounded-xl border border-border bg-muted"
-              >
-                <img
-                  src={p.url}
-                  alt={p.caption || "Meeting photo"}
-                  loading="lazy"
-                  className="h-72 w-full object-cover transition-transform duration-300 group-hover:scale-105 sm:h-80"
-                />
-                {p.caption ? (
-                  <p className="truncate px-3 py-2 text-xs text-muted-foreground">{p.caption}</p>
-                ) : null}
-              </a>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }
 
-function RowActions({
-  id,
-  downloading,
-  onDownload,
-}: {
-  id: string;
-  downloading: boolean;
-  onDownload: () => void;
-}) {
+function LegendKey({ color, label }: { color: string; label: string }) {
   return (
-    <div className="flex items-center justify-end gap-0.5">
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={onDownload}
-        disabled={downloading}
-        aria-label="Download PDF"
-        title="Download PDF"
-      >
-        {downloading ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Download className="h-4 w-4" />
-        )}
-      </Button>
-      <Link to="/edit/$id" params={{ id }}>
-        <Button size="icon" variant="ghost" aria-label="Edit MOM" title="Edit MOM">
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </Link>
-    </div>
-  );
-}
-
-function PendingCount({ count }: { count: number }) {
-  if (count === 0) {
-    return <span className="text-xs text-muted-foreground">All clear</span>;
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/60 bg-gold/20 px-2.5 py-0.5 text-xs font-medium text-gold-foreground dark:text-gold">
-      <Clock3 className="h-3 w-3" />
-      {plural(count, "pending")}
+    <span className="inline-flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+      {label}
     </span>
   );
 }
 
-function PhotoStack({ photos, onOpen }: { photos: MomPhoto[]; onOpen: () => void }) {
-  if (!photos.length) {
-    return <span className="text-xs text-muted-foreground">—</span>;
-  }
-  const shown = photos.slice(0, 3);
-  const extra = photos.length - shown.length;
+/** The bar only carries the on-site/online split; the rest of a person's
+ *  numbers live here so the chart itself stays readable. */
+function VisitTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: EmployeeVisits }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const t = payload[0].payload;
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`View ${plural(photos.length, "photo")}`}
-      className="group flex items-center -space-x-3 rounded-full p-0.5 transition-all hover:-space-x-1"
-    >
-      {shown.map((p, i) => (
-        <span
-          key={p.path}
-          className="relative h-9 w-9 overflow-hidden rounded-full border-2 border-card shadow-sm ring-1 ring-border transition-transform duration-200 group-hover:scale-105"
-          style={{ zIndex: shown.length - i }}
-        >
-          <img
-            src={p.url}
-            alt=""
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        </span>
-      ))}
-      {extra > 0 ? (
-        <span className="relative z-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-card bg-secondary text-[11px] font-semibold text-secondary-foreground ring-1 ring-border">
-          +{extra}
-        </span>
-      ) : null}
-    </button>
-  );
-}
-
-function EmptyState({ filtered, onClear }: { filtered: boolean; onClear: () => void }) {
-  return (
-    <Card className="flex flex-col items-center px-6 py-16 text-center">
-      <Seal className="mb-6 h-28 w-28 text-primary/30" />
-      {filtered ? (
-        <>
-          <h2 className="font-display text-lg font-semibold">No meetings match those filters</h2>
-          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-            Try a shorter search term, or clear the filters to see everything.
-          </p>
-          <Button variant="outline" className="mt-5 gap-1.5" onClick={onClear}>
-            <X className="h-4 w-4" /> Clear filters
-          </Button>
-        </>
-      ) : (
-        <>
-          <h2 className="font-display text-lg font-semibold">No meetings recorded yet</h2>
-          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-            Write up your first client visit. Rough notes are fine — the AI cleans up the wording
-            before you send it.
-          </p>
-          <Link to="/mom/new" className="mt-5">
-            <Button className="gap-1.5 font-semibold">
-              <Plus className="h-4 w-4" /> New MOM
-            </Button>
-          </Link>
-        </>
+    <div className="rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-md">
+      <p className="font-display text-sm font-semibold">{t.name}</p>
+      <p className="mt-1">
+        <span className="tabular font-medium">{t.visits}</span>{" "}
+        {t.visits === 1 ? "visit" : "visits"}
+      </p>
+      <p className="mt-0.5 text-muted-foreground">
+        <span className="tabular">{t.onsite}</span> on site ·{" "}
+        <span className="tabular">{t.online}</span> online
+      </p>
+      <p className="mt-0.5 text-muted-foreground">
+        <span className="tabular">{t.clients}</span> {t.clients === 1 ? "client" : "clients"}
+        {t.joint > 0 && (
+          <>
+            {" "}
+            · <span className="tabular">{t.joint}</span> joint
+          </>
+        )}
+      </p>
+      {t.lastVisit && (
+        <p className="mt-0.5 text-muted-foreground">Last {relativeDay(t.lastVisit)}</p>
       )}
+    </div>
+  );
+}
+
+function Stat({
+  icon: Icon,
+  label,
+  value,
+  caption,
+  highlight,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  caption?: string;
+  highlight?: boolean;
+}) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2">
+        <Icon className={highlight ? "h-4 w-4 text-primary" : "h-4 w-4 text-muted-foreground"} />
+        <p className="eyebrow">{label}</p>
+      </div>
+      <p className="mt-3 font-display text-4xl font-bold tracking-tight tabular-nums">{value}</p>
+      {caption && <p className="mt-1.5 text-xs text-muted-foreground">{caption}</p>}
     </Card>
   );
 }
 
-function ListSkeleton() {
-  return (
-    <Card className="divide-y divide-border overflow-hidden">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 px-5 py-4">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="h-5 w-20 rounded-full" />
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="ml-auto h-8 w-24" />
-        </div>
-      ))}
-    </Card>
-  );
+function summarise(moms: MOM[]) {
+  const now = new Date();
+  const thisKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevKey = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}`;
+
+  let pendingOurs = 0;
+  let pendingTheirs = 0;
+  const moduleCounts = new Map<string, number>();
+  const monthCounts = new Map<string, number>();
+  const clients = new Set<string>();
+
+  for (const m of moms) {
+    clients.add(m.client_name.trim().toLowerCase());
+    const key = monthKey(m.meeting_date);
+    monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
+
+    const pending = m.pending_points ?? [];
+    const ours = pending.filter((p) => p.pending_with === "okie_dokie");
+    pendingOurs += ours.length;
+    pendingTheirs += pending.length - ours.length;
+
+    for (const p of pending) {
+      moduleCounts.set(p.module, (moduleCounts.get(p.module) ?? 0) + 1);
+    }
+  }
+
+  // Last six months, oldest first, including months with nothing recorded.
+  const byMonth: { label: string; count: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    byMonth.push({
+      label: d.toLocaleString(undefined, { month: "short" }),
+      count: monthCounts.get(key) ?? 0,
+    });
+  }
+
+  return {
+    total: moms.length,
+    thisMonth: monthCounts.get(thisKey) ?? 0,
+    lastMonth: monthCounts.get(prevKey) ?? 0,
+    clients: clients.size,
+    pendingTotal: pendingOurs + pendingTheirs,
+    pendingOurs,
+    pendingTheirs,
+    byModule: [...moduleCounts.entries()]
+      .map(([module, count]) => ({ module, count }))
+      .sort((a, b) => b.count - a.count),
+    byMonth,
+  };
+}
+
+type PeriodKey = "month" | "quarter" | "all";
+
+const PERIODS: { value: PeriodKey; label: string }[] = [
+  { value: "month", label: "This month" },
+  { value: "quarter", label: "90 days" },
+  { value: "all", label: "All time" },
+];
+
+function withinPeriod(moms: MOM[], period: PeriodKey): MOM[] {
+  if (period === "all") return moms;
+  const now = new Date();
+  const start =
+    period === "month"
+      ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89);
+  const cutoff = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(
+    start.getDate(),
+  ).padStart(2, "0")}`;
+  return moms.filter((m) => m.meeting_date >= cutoff);
 }
