@@ -134,9 +134,13 @@ function DetailPage() {
       <article className="print-document space-y-5">
         {/* Document masthead — the one place the seal appears at full size. */}
         <Card data-doc-card className="relative overflow-hidden border-0 bg-seal text-seal-foreground">
-          {/* Sits fully inside the card — a clipped seal reads as a mistake. */}
-          <Seal className="pointer-events-none absolute right-7 top-1/2 hidden h-36 w-36 -translate-y-1/2 rotate-[8deg] text-seal-foreground/20 sm:block lg:h-44 lg:w-44" />
-          <div className="relative px-6 py-7 sm:px-8 sm:py-9 sm:pr-52 lg:pr-60">
+          {/* Seal stamp: cream disc + maroon seal so it reads clearly on the maroon card. */}
+          <div className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 sm:block lg:right-8">
+            <div className="flex items-center justify-center rounded-full bg-seal-foreground p-3 shadow-xl ring-1 ring-seal-foreground/30 lg:p-4">
+              <Seal className="h-32 w-32 rotate-[8deg] text-seal lg:h-40 lg:w-40" />
+            </div>
+          </div>
+          <div className="relative px-6 py-7 sm:px-8 sm:py-9 sm:pr-48 lg:pr-64">
             <p className="eyebrow text-seal-foreground/70">Minutes of meeting</p>
             <h1 className="mt-2 max-w-[24ch] font-display text-3xl font-bold leading-tight sm:text-4xl">
               {mom.client_name}
