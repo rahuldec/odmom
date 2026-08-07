@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, Clock3, FileText, Users } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -20,7 +20,9 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMoms } from "@/lib/mom.functions";
 import type { MOM } from "@/lib/mom-types";
-import { formatDay, monthKey, plural, relativeDay } from "@/lib/format";
+import { formatDay, initials, monthKey, plural, relativeDay } from "@/lib/format";
+import { visitsByEmployee } from "@/lib/people";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -49,6 +51,12 @@ function DashboardPage() {
   });
 
   const stats = useMemo(() => summarise(data ?? []), [data]);
+
+  const [period, setPeriod] = useState<PeriodKey>("all");
+  const team = useMemo(
+    () => visitsByEmployee(withinPeriod(data ?? [], period)),
+    [data, period],
+  );
 
   return (
     <AppShell>
@@ -177,6 +185,90 @@ function DashboardPage() {
               )}
             </Card>
           </div>
+
+          {/* Visits by team member — a joint visit counts for everyone on it. */}
+          <Card className="mt-5 overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+              <div>
+                <h2 className="font-display text-base font-semibold">Visits by team member</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  A visit made together counts for everyone who was on it.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1">
+                {PERIODS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setPeriod(p.value)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                      period === p.value
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {team.length === 0 ? (
+              <p className="px-5 py-10 text-center text-sm text-muted-foreground">
+                No visits recorded in this period.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {team.map((t, i) => (
+                  <li key={t.key} className="flex items-center gap-4 px-5 py-3.5">
+                    <span className="tabular w-5 shrink-0 text-xs text-muted-foreground">
+                      {i + 1}
+                    </span>
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                      {initials(t.name)}
+                    </span>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-3">
+                        <p className="truncate font-medium">{t.name}</p>
+                        <span className="tabular shrink-0 font-display text-lg font-semibold leading-none">
+                          {t.visits}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary"
+                          style={{
+                            width: `${Math.round((t.visits / team[0].visits) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        <span className="tabular">{t.onsite}</span> on site ·{" "}
+                        <span className="tabular">{t.online}</span> online ·{" "}
+                        <span className="tabular">{t.clients}</span>{" "}
+                        {t.clients === 1 ? "client" : "clients"}
+                        {t.joint > 0 && (
+                          <>
+                            {" "}
+                            · <span className="tabular">{t.joint}</span> joint
+                          </>
+                        )}
+                        {t.lastVisit && <> · last {relativeDay(t.lastVisit)}</>}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="border-t border-border bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">
+              {plural(team.reduce((n, t) => n + t.visits, 0), "credited visit")} across{" "}
+              {plural(team.length, "team member")} — read from the recorder plus every attendee
+              tagged as Okie Dokie team.
+            </div>
+          </Card>
 
           {/* Meetings over time */}
           <Card className="mt-5 overflow-hidden">
@@ -311,4 +403,25 @@ function summarise(moms: MOM[]) {
     byMonth,
     followUps: followUps.sort((a, b) => b.mom.meeting_date.localeCompare(a.mom.meeting_date)),
   };
+}
+
+type PeriodKey = "month" | "quarter" | "all";
+
+const PERIODS: { value: PeriodKey; label: string }[] = [
+  { value: "month", label: "This month" },
+  { value: "quarter", label: "90 days" },
+  { value: "all", label: "All time" },
+];
+
+function withinPeriod(moms: MOM[], period: PeriodKey): MOM[] {
+  if (period === "all") return moms;
+  const now = new Date();
+  const start =
+    period === "month"
+      ? new Date(now.getFullYear(), now.getMonth(), 1)
+      : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 89);
+  const cutoff = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(
+    start.getDate(),
+  ).padStart(2, "0")}`;
+  return moms.filter((m) => m.meeting_date >= cutoff);
 }
