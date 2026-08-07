@@ -1,14 +1,25 @@
-import { useRef, useState } from "react";
 import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  AlarmClockCheck,
+  Check,
+  ClipboardCheck,
+  ImagePlus,
+  Loader2,
+  MessagesSquare,
+  Paperclip,
+  PenLine,
   Plus,
   Sparkles,
   Trash2,
-  Loader2,
+  Undo2,
   Users,
-  MessagesSquare,
-  ClipboardCheck,
-  AlarmClockCheck,
-  ImagePlus,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,20 +33,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Card } from "@/components/ui/card";
+import { ModuleChip } from "@/components/chips";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { generateMomFromNotes } from "@/lib/mom.functions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   MODULES,
-  ATTENDEE_TEAMS,
   PENDING_WITH,
   type MOMInput,
   type AttendeeTeam,
@@ -47,8 +53,10 @@ import {
 type Props = {
   initial?: MOMInput;
   submitting?: boolean;
-  onSubmit: (input: MOMInput) => void;
+  onSubmit: (input: MOMInput) => void | Promise<void>;
   submitLabel: string;
+  /** Set on the "new MOM" route so work-in-progress survives a lost connection. */
+  draftKey?: string;
 };
 
 const blank = (): MOMInput => ({
@@ -65,23 +73,104 @@ const blank = (): MOMInput => ({
   photos: [],
 });
 
-
-// Which sections the AI can regenerate
 type AiSection = "discussion_points" | "work_completed" | "pending_points";
 
-export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
+const SECTIONS = [
+  { id: "meeting", label: "Meeting", icon: PenLine, required: true },
+  { id: "attendees", label: "Attendees", icon: Users, required: false },
+  { id: "discussion", label: "Discussion", icon: MessagesSquare, required: false },
+  { id: "work", label: "Work done", icon: ClipboardCheck, required: false },
+  { id: "pending", label: "Pending", icon: AlarmClockCheck, required: false },
+  { id: "photos", label: "Photos", icon: ImagePlus, required: true },
+] as const;
+
+type SectionId = (typeof SECTIONS)[number]["id"];
+type Errors = Partial<Record<"client_name" | "employee_name" | "meeting_date" | "photos", string>>;
+
+export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }: Props) {
   const [form, setForm] = useState<MOMInput>(initial ?? blank());
-  // Track loading per-section ("all" means global polish)
+  const [errors, setErrors] = useState<Errors>({});
   const [aiLoading, setAiLoading] = useState<AiSection | null>(null);
+  const [undoable, setUndoable] = useState<Partial<Record<AiSection, MOMInput[AiSection]>>>({});
+  const [draft, setDraft] = useState<{ savedAt: string; value: MOMInput } | null>(null);
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const genFn = useServerFn(generateMomFromNotes);
+  const dirty = useRef(false);
 
-  const update = <K extends keyof MOMInput>(k: K, v: MOMInput[K]) =>
+  const update = <K extends keyof MOMInput>(k: K, v: MOMInput[K]) => {
+    dirty.current = true;
     setForm((f) => ({ ...f, [k]: v }));
+  };
 
-  /** Build the notes string. Pass a section to only include that section's items. */
+  /* ---------------------------------------------------------------- drafts */
+
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { savedAt: string; value: MOMInput };
+      if (parsed?.value?.client_name !== undefined) setDraft(parsed);
+    } catch {
+      /* corrupt draft — ignore */
+    }
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftKey || !dirty.current) return;
+    const t = setTimeout(() => {
+      try {
+        const savedAt = new Date().toISOString();
+        localStorage.setItem(draftKey, JSON.stringify({ savedAt, value: form }));
+        setDraftSavedAt(savedAt);
+      } catch {
+        /* storage full or blocked */
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [form, draftKey]);
+
+  const clearDraft = useCallback(() => {
+    if (!draftKey) return;
+    try {
+      localStorage.removeItem(draftKey);
+    } catch {
+      /* ignore */
+    }
+    setDraftSavedAt(null);
+  }, [draftKey]);
+
+  /* ------------------------------------------------------------ completion */
+
+  const status = useMemo(() => {
+    const meetingDone = Boolean(
+      form.client_name.trim() && form.employee_name.trim() && form.meeting_date,
+    );
+    return {
+      meeting: meetingDone ? "done" : "todo",
+      attendees: form.attendees.length ? "done" : "empty",
+      discussion: form.discussion_points.length ? "done" : "empty",
+      work: form.work_completed.length ? "done" : "empty",
+      pending: form.pending_points.length ? "done" : "empty",
+      photos: form.photos.length ? "done" : "todo",
+    } as Record<SectionId, "done" | "todo" | "empty">;
+  }, [form]);
+
+  const counts: Record<SectionId, number | null> = {
+    meeting: null,
+    attendees: form.attendees.length,
+    discussion: form.discussion_points.length,
+    work: form.work_completed.length,
+    pending: form.pending_points.length,
+    photos: form.photos.length,
+  };
+
+  const blockers = SECTIONS.filter((s) => s.required && status[s.id] === "todo");
+
+  /* -------------------------------------------------------------------- AI */
+
   const buildNotes = (section: AiSection): string => {
     const lines: string[] = [];
-
     if (section === "discussion_points") {
       const dp = form.discussion_points.filter((d) => d.details.trim());
       if (dp.length) {
@@ -89,7 +178,6 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         dp.forEach((d) => lines.push(`- [${d.module}] ${d.details.trim()}`));
       }
     }
-
     if (section === "work_completed") {
       const wc = form.work_completed.filter((w) => w.task.trim());
       if (wc.length) {
@@ -97,48 +185,41 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         wc.forEach((w) => lines.push(`- [${w.module}] ${w.task.trim()}`));
       }
     }
-
     if (section === "pending_points") {
       const pp = form.pending_points.filter((p) => p.requirement.trim());
       if (pp.length) {
         lines.push("Pending points (rough):");
         pp.forEach((p) =>
           lines.push(
-            `- [${p.module}] ${p.requirement.trim()} (pending with: ${p.pending_with === "okie_dokie" ? "Okie Dokie team" : "client"})`,
+            `- [${p.module}] ${p.requirement.trim()} (pending with: ${
+              p.pending_with === "okie_dokie" ? "Okie Dokie team" : "client"
+            })`,
           ),
         );
       }
     }
-
     return lines.join("\n");
   };
 
-  /** Run AI for a specific section, or all sections at once. */
   const handleGenerate = async (section: AiSection) => {
     const notes = buildNotes(section);
     if (notes.trim().length < 5) {
-      toast.error(
-        "Add a few rough lines in this section first.",
-      );
+      toast.error("Write a few rough lines in this section first.");
       return;
     }
 
+    const before = structuredClone(form[section]) as MOMInput[AiSection];
     setAiLoading(section);
     try {
       const r = await genFn({ data: { notes } });
-
       setForm((f) => {
         const next = { ...f };
-        if (section === "discussion_points") {
-          next.discussion_points = r.discussion_points;
-        }
-        if (section === "work_completed") {
-          next.work_completed = r.work_completed;
-        }
+        if (section === "discussion_points") next.discussion_points = r.discussion_points;
+        if (section === "work_completed") next.work_completed = r.work_completed;
         if (section === "pending_points") {
           // The AI only rewrites module/requirement/pending_with text — it never
           // sees or returns attachments. Re-attach the original files by index
-          // so "Auto-format with AI" doesn't wipe out client sample uploads.
+          // so formatting doesn't wipe out client sample uploads.
           next.pending_points = r.pending_points.map((pp, i) => ({
             ...pp,
             attachments: f.pending_points[i]?.attachments ?? [],
@@ -146,176 +227,754 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel }: Props) {
         }
         return next;
       });
-
-      toast.success("AI improved this section.");
+      dirty.current = true;
+      setUndoable((u) => ({ ...u, [section]: before }));
+      toast.success("Wording cleaned up. Read it before you save.");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "AI failed");
+      toast.error(e instanceof Error ? e.message : "Couldn't reach the AI. Try again.");
     } finally {
       setAiLoading(null);
     }
   };
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.client_name.trim() || !form.employee_name.trim()) {
-      toast.error("Client name and Employee name are required.");
-      return;
-    }
-    if (form.photos.length === 0) {
-      toast.error("Please add at least one photo before submitting.");
-      return;
-    }
-    onSubmit({
-      ...form,
-      location: form.location?.trim() || null,
-      summary: form.summary?.trim() || null,
-    });
+  const handleUndo = (section: AiSection) => {
+    const before = undoable[section];
+    if (!before) return;
+    setForm((f) => ({ ...f, [section]: before }) as MOMInput);
+    setUndoable((u) => ({ ...u, [section]: undefined }));
   };
 
+  /* ------------------------------------------------------------ validation */
+
+  const goTo = (id: SectionId) => {
+    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: Errors = {};
+    if (!form.client_name.trim()) next.client_name = "Enter the client or institute name.";
+    if (!form.employee_name.trim()) next.employee_name = "Enter who attended from Okie Dokie.";
+    if (!form.meeting_date) next.meeting_date = "Pick the meeting date.";
+    if (form.photos.length === 0) next.photos = "Add at least one photo from the visit.";
+
+    setErrors(next);
+    if (Object.keys(next).length > 0) {
+      const first: SectionId = next.photos && Object.keys(next).length === 1 ? "photos" : "meeting";
+      goTo(first);
+      toast.error("A few things still need filling in.");
+      return;
+    }
+
+    try {
+      await onSubmit({
+        ...form,
+        location: form.location?.trim() || null,
+        summary: form.summary?.trim() || null,
+      });
+      clearDraft();
+    } catch {
+      // The route already showed the failure — keep the draft so nothing is lost.
+    }
+  };
+
+  /* ----------------------------------------------------------------- paste */
+
+  const photosRef = useRef<PhotosHandle>(null);
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []).filter((f) =>
+        f.type.startsWith("image/"),
+      );
+      if (files.length) photosRef.current?.addFiles(files);
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, []);
+
+  /* ------------------------------------------------------------------ view */
+
   return (
-    <form onSubmit={submit} className="space-y-6">
-      {/* Meeting info */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">Meeting Information</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Field label="Client / Institute Name *">
-            <Input value={form.client_name} onChange={(e) => update("client_name", e.target.value)} />
-          </Field>
-          <Field label="Employee Name *">
-            <Input value={form.employee_name} onChange={(e) => update("employee_name", e.target.value)} />
-          </Field>
-          <Field label="Meeting Date *">
-            <Input type="date" value={form.meeting_date} onChange={(e) => update("meeting_date", e.target.value)} />
-          </Field>
-          <Field label="Meeting Type *">
-            <Select value={form.meeting_type} onValueChange={(v) => update("meeting_type", v as "online" | "offline")}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="offline">Offline</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label="Location" className="md:col-span-2">
-            <Input value={form.location ?? ""} onChange={(e) => update("location", e.target.value)} placeholder="Address / link" />
-          </Field>
-        </CardContent>
-      </Card>
+    <form onSubmit={submit} className="lg:grid lg:grid-cols-[13rem_1fr] lg:gap-10">
+      {/* Section rail */}
+      <nav aria-label="Form sections" className="mb-6 lg:mb-0">
+        <div className="sticky top-24">
+          <p className="eyebrow mb-3 hidden lg:block">Sections</p>
+          <ul className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:block lg:space-y-0.5 lg:overflow-visible lg:px-0">
+            {SECTIONS.map((s) => {
+              const state = status[s.id];
+              const count = counts[s.id];
+              return (
+                <li key={s.id} className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => goTo(s.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors lg:border-transparent lg:bg-transparent",
+                      "border-border bg-card hover:bg-secondary",
+                    )}
+                  >
+                    <StateDot state={state} required={s.required} />
+                    <span className="font-medium">{s.label}</span>
+                    {count !== null && count > 0 && (
+                      <span className="tabular ml-auto text-xs text-muted-foreground">{count}</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </nav>
 
-      {/* Attendees */}
-      <DynamicSection
-        title="Attendees"
-        icon={Users}
-        items={form.attendees}
-        onChange={(v) => update("attendees", v)}
-        addLabel="Add Attendee"
-        empty={{ name: "", designation: "", mobile: "", team: "client" as AttendeeTeam }}
-        render={(a, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-            <Select value={a.team} onValueChange={(v) => set({ ...a, team: v as AttendeeTeam })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {ATTENDEE_TEAMS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Input placeholder="Name" value={a.name} onChange={(e) => set({ ...a, name: e.target.value })} />
-            <Input placeholder="Designation" value={a.designation} onChange={(e) => set({ ...a, designation: e.target.value })} />
-            <Input placeholder="Mobile (optional)" value={a.mobile ?? ""} onChange={(e) => set({ ...a, mobile: e.target.value })} />
+      <div className="space-y-6">
+        {draft && draftKey && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+            <span className="flex-1">
+              You have an unsaved MOM from{" "}
+              <span className="tabular">
+                {new Date(draft.savedAt).toLocaleString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+              .
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setForm(draft.value);
+                setDraft(null);
+                toast.success("Draft restored");
+              }}
+            >
+              Restore it
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                clearDraft();
+                setDraft(null);
+              }}
+            >
+              Discard
+            </Button>
           </div>
         )}
-      />
 
-      {/* Discussion points */}
-      <DynamicSection
-        title="Discussion Points"
-        icon={MessagesSquare}
-        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
-        items={form.discussion_points}
-        onChange={(v) => update("discussion_points", v)}
-        addLabel="Add Point"
-        empty={{ module: "Other", details: "" }}
-        aiLoading={aiLoading === "discussion_points"}
-        onAiPolish={() => handleGenerate("discussion_points")}
-        render={(d, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr]">
-            <ModuleSelect value={d.module} onChange={(m) => set({ ...d, module: m })} />
-            <Textarea rows={2} placeholder="Discussion details" value={d.details} onChange={(e) => set({ ...d, details: e.target.value })} />
+        {/* 1 — Meeting */}
+        <Section
+          id="meeting"
+          index={1}
+          title="Meeting"
+          description="Who you met, when, and where. This becomes the header of the PDF."
+          icon={PenLine}
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Field label="Client or institute" required error={errors.client_name}>
+              <Input
+                value={form.client_name}
+                onChange={(e) => update("client_name", e.target.value)}
+                placeholder="e.g. Poornima Institute"
+                aria-invalid={!!errors.client_name}
+              />
+            </Field>
+            <Field label="Okie Dokie attendee" required error={errors.employee_name}>
+              <Input
+                value={form.employee_name}
+                onChange={(e) => update("employee_name", e.target.value)}
+                placeholder="Your name"
+                aria-invalid={!!errors.employee_name}
+              />
+            </Field>
+            <Field label="Meeting date" required error={errors.meeting_date}>
+              <Input
+                type="date"
+                value={form.meeting_date}
+                onChange={(e) => update("meeting_date", e.target.value)}
+                aria-invalid={!!errors.meeting_date}
+              />
+            </Field>
+            <Field label="Meeting type" required>
+              <Segmented
+                value={form.meeting_type}
+                onChange={(v) => update("meeting_type", v)}
+                options={[
+                  { value: "offline", label: "On site" },
+                  { value: "online", label: "Online" },
+                ]}
+              />
+            </Field>
+            <Field
+              label={form.meeting_type === "online" ? "Meeting link" : "Campus / address"}
+              className="md:col-span-2"
+            >
+              <Input
+                value={form.location ?? ""}
+                onChange={(e) => update("location", e.target.value)}
+                placeholder={
+                  form.meeting_type === "online"
+                    ? "Google Meet or Zoom link"
+                    : "Campus name and city"
+                }
+              />
+            </Field>
           </div>
-        )}
-      />
+        </Section>
 
-      {/* Work completed */}
-      <DynamicSection
-        title="Work Completed During Visit"
-        icon={ClipboardCheck}
-        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
-        items={form.work_completed}
-        onChange={(v) => update("work_completed", v)}
-        addLabel="Add Task"
-        empty={{ module: "Other", task: "" }}
-        aiLoading={aiLoading === "work_completed"}
-        onAiPolish={() => handleGenerate("work_completed")}
-        render={(w, set) => (
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-[180px_1fr]">
-            <ModuleSelect value={w.module} onChange={(m) => set({ ...w, module: m })} />
-            <Input placeholder="Task completed" value={w.task} onChange={(e) => set({ ...w, task: e.target.value })} />
-          </div>
-        )}
-      />
+        {/* 2 — Attendees */}
+        <Section
+          id="attendees"
+          index={2}
+          title="Attendees"
+          description="Everyone in the room, on both sides."
+          icon={Users}
+          count={form.attendees.length}
+          onAdd={() =>
+            update("attendees", [
+              ...form.attendees,
+              { name: "", designation: "", mobile: "", team: "client" as AttendeeTeam },
+            ])
+          }
+          addLabel="Add attendee"
+          emptyLabel="No attendees added yet."
+        >
+          {form.attendees.map((a, i) => (
+            <Row
+              key={i}
+              onRemove={() =>
+                update(
+                  "attendees",
+                  form.attendees.filter((_, idx) => idx !== i),
+                )
+              }
+              removeLabel={`Remove attendee ${i + 1}`}
+            >
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_170px]">
+                <Input
+                  placeholder="Name"
+                  value={a.name}
+                  onChange={(e) => {
+                    const copy = form.attendees.slice();
+                    copy[i] = { ...a, name: e.target.value };
+                    update("attendees", copy);
+                  }}
+                />
+                <Input
+                  placeholder="Designation"
+                  value={a.designation}
+                  onChange={(e) => {
+                    const copy = form.attendees.slice();
+                    copy[i] = { ...a, designation: e.target.value };
+                    update("attendees", copy);
+                  }}
+                />
+                <Input
+                  placeholder="Mobile (optional)"
+                  inputMode="tel"
+                  value={a.mobile ?? ""}
+                  onChange={(e) => {
+                    const copy = form.attendees.slice();
+                    copy[i] = { ...a, mobile: e.target.value };
+                    update("attendees", copy);
+                  }}
+                />
+                <Segmented
+                  value={a.team}
+                  onChange={(v) => {
+                    const copy = form.attendees.slice();
+                    copy[i] = { ...a, team: v };
+                    update("attendees", copy);
+                  }}
+                  options={[
+                    { value: "client" as AttendeeTeam, label: "Client" },
+                    { value: "okie_dokie" as AttendeeTeam, label: "Okie Dokie" },
+                  ]}
+                />
+              </div>
+            </Row>
+          ))}
+        </Section>
 
-      {/* Pending */}
-      <DynamicSection
-        title="Pending Points"
-        icon={AlarmClockCheck}
-        hint="💡 Tip: Type rough bullet points here, then click ✨ Auto-format with AI to turn them into clean, professional wording."
-        items={form.pending_points}
-        onChange={(v) => update("pending_points", v)}
-        addLabel="Add Pending Item"
-        bottomAddLabel="Add another pending point"
-        empty={{ module: "Other", requirement: "", pending_with: "okie_dokie" as PendingWith, attachments: [] }}
-        aiLoading={aiLoading === "pending_points"}
-        onAiPolish={() => handleGenerate("pending_points")}
-        render={(p, set) => (
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-[160px_1fr_170px]">
-              <ModuleSelect value={p.module} onChange={(m) => set({ ...p, module: m })} />
-              <Input placeholder="Requirement" value={p.requirement} onChange={(e) => set({ ...p, requirement: e.target.value })} />
-              <Select value={p.pending_with} onValueChange={(v) => set({ ...p, pending_with: v as PendingWith })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PENDING_WITH.map((pw) => <SelectItem key={pw.value} value={pw.value}>{pw.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        {/* 3 — Discussion */}
+        <Section
+          id="discussion"
+          index={3}
+          title="Discussion points"
+          description="What was raised. Type it rough — formatting comes after."
+          icon={MessagesSquare}
+          count={form.discussion_points.length}
+          onAdd={() =>
+            update("discussion_points", [
+              ...form.discussion_points,
+              { module: "Other", details: "" },
+            ])
+          }
+          addLabel="Add point"
+          emptyLabel="No discussion points yet."
+          ai={{
+            loading: aiLoading === "discussion_points",
+            disabled: form.discussion_points.length === 0,
+            onRun: () => void handleGenerate("discussion_points"),
+            canUndo: !!undoable.discussion_points,
+            onUndo: () => handleUndo("discussion_points"),
+          }}
+        >
+          {form.discussion_points.map((d, i) => (
+            <Row
+              key={i}
+              onRemove={() =>
+                update(
+                  "discussion_points",
+                  form.discussion_points.filter((_, idx) => idx !== i),
+                )
+              }
+              removeLabel={`Remove discussion point ${i + 1}`}
+            >
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-[190px_1fr]">
+                <ModuleSelect
+                  value={d.module}
+                  onChange={(m) => {
+                    const copy = form.discussion_points.slice();
+                    copy[i] = { ...d, module: m };
+                    update("discussion_points", copy);
+                  }}
+                />
+                <Textarea
+                  rows={2}
+                  placeholder="What was discussed"
+                  value={d.details}
+                  onChange={(e) => {
+                    const copy = form.discussion_points.slice();
+                    copy[i] = { ...d, details: e.target.value };
+                    update("discussion_points", copy);
+                  }}
+                />
+              </div>
+            </Row>
+          ))}
+        </Section>
+
+        {/* 4 — Work completed */}
+        <Section
+          id="work"
+          index={4}
+          title="Work completed during the visit"
+          description="Anything you configured, fixed, or trained on while you were there."
+          icon={ClipboardCheck}
+          count={form.work_completed.length}
+          onAdd={() =>
+            update("work_completed", [...form.work_completed, { module: "Other", task: "" }])
+          }
+          addLabel="Add task"
+          emptyLabel="No completed work recorded yet."
+          ai={{
+            loading: aiLoading === "work_completed",
+            disabled: form.work_completed.length === 0,
+            onRun: () => void handleGenerate("work_completed"),
+            canUndo: !!undoable.work_completed,
+            onUndo: () => handleUndo("work_completed"),
+          }}
+        >
+          {form.work_completed.map((w, i) => (
+            <Row
+              key={i}
+              onRemove={() =>
+                update(
+                  "work_completed",
+                  form.work_completed.filter((_, idx) => idx !== i),
+                )
+              }
+              removeLabel={`Remove task ${i + 1}`}
+            >
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-[190px_1fr]">
+                <ModuleSelect
+                  value={w.module}
+                  onChange={(m) => {
+                    const copy = form.work_completed.slice();
+                    copy[i] = { ...w, module: m };
+                    update("work_completed", copy);
+                  }}
+                />
+                <Input
+                  placeholder="What was completed"
+                  value={w.task}
+                  onChange={(e) => {
+                    const copy = form.work_completed.slice();
+                    copy[i] = { ...w, task: e.target.value };
+                    update("work_completed", copy);
+                  }}
+                />
+              </div>
+            </Row>
+          ))}
+        </Section>
+
+        {/* 5 — Pending */}
+        <Section
+          id="pending"
+          index={5}
+          title="Pending points"
+          description="Open items, and who they're waiting on. This is the part clients read first."
+          icon={AlarmClockCheck}
+          count={form.pending_points.length}
+          onAdd={() =>
+            update("pending_points", [
+              ...form.pending_points,
+              {
+                module: "Other",
+                requirement: "",
+                pending_with: "okie_dokie" as PendingWith,
+                attachments: [],
+              },
+            ])
+          }
+          addLabel="Add pending item"
+          emptyLabel="Nothing pending — good place to be."
+          ai={{
+            loading: aiLoading === "pending_points",
+            disabled: form.pending_points.length === 0,
+            onRun: () => void handleGenerate("pending_points"),
+            canUndo: !!undoable.pending_points,
+            onUndo: () => handleUndo("pending_points"),
+          }}
+        >
+          {form.pending_points.map((p, i) => (
+            <Row
+              key={i}
+              onRemove={() =>
+                update(
+                  "pending_points",
+                  form.pending_points.filter((_, idx) => idx !== i),
+                )
+              }
+              removeLabel={`Remove pending item ${i + 1}`}
+            >
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-2 lg:grid-cols-[190px_1fr_210px]">
+                  <ModuleSelect
+                    value={p.module}
+                    onChange={(m) => {
+                      const copy = form.pending_points.slice();
+                      copy[i] = { ...p, module: m };
+                      update("pending_points", copy);
+                    }}
+                  />
+                  <Input
+                    placeholder="What still needs doing"
+                    value={p.requirement}
+                    onChange={(e) => {
+                      const copy = form.pending_points.slice();
+                      copy[i] = { ...p, requirement: e.target.value };
+                      update("pending_points", copy);
+                    }}
+                  />
+                  <Select
+                    value={p.pending_with}
+                    onValueChange={(v) => {
+                      const copy = form.pending_points.slice();
+                      copy[i] = { ...p, pending_with: v as PendingWith };
+                      update("pending_points", copy);
+                    }}
+                  >
+                    <SelectTrigger aria-label="Pending with">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PENDING_WITH.map((pw) => (
+                        <SelectItem key={pw.value} value={pw.value}>
+                          Waiting on {pw.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <PendingAttachments
+                  value={p.attachments ?? []}
+                  onChange={(nextFiles) => {
+                    const copy = form.pending_points.slice();
+                    copy[i] = { ...p, attachments: nextFiles };
+                    update("pending_points", copy);
+                  }}
+                />
+              </div>
+            </Row>
+          ))}
+        </Section>
+
+        {/* 6 — Photos */}
+        <PhotosSection
+          ref={photosRef}
+          photos={form.photos}
+          error={errors.photos}
+          onChange={(v) => update("photos", v)}
+        />
+
+        {/* Sticky action bar */}
+        <div className="sticky bottom-0 -mx-4 border-t border-border bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:px-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="min-w-0 flex-1 text-sm">
+              {blockers.length > 0 ? (
+                <span className="text-muted-foreground">
+                  Still needed:{" "}
+                  {blockers.map((b, i) => (
+                    <span key={b.id}>
+                      {i > 0 && ", "}
+                      <button
+                        type="button"
+                        className="font-medium text-primary hover:underline"
+                        onClick={() => goTo(b.id)}
+                      >
+                        {b.label.toLowerCase()}
+                      </button>
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <Check className="h-4 w-4 text-primary" /> Ready to save
+                </span>
+              )}
+              {draftSavedAt && (
+                <span className="ml-2 hidden text-xs text-muted-foreground sm:inline">
+                  · draft saved
+                </span>
+              )}
             </div>
-            <PendingAttachments
-              value={p.attachments ?? []}
-              onChange={(next) => set({ ...p, attachments: next })}
-            />
+            <Button type="submit" disabled={submitting} className="gap-2 font-semibold">
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitLabel}
+            </Button>
           </div>
-        )}
-      />
-
-      {/* Photos */}
-      <PhotosSection
-        photos={form.photos}
-        onChange={(v) => update("photos", v)}
-      />
-
-
-      {/* Final submit */}
-      <Button type="submit" disabled={submitting} size="lg" className="w-full gap-2 text-base">
-        {submitting && <Loader2 className="h-5 w-5 animate-spin" />}
-        {submitLabel}
-      </Button>
+        </div>
+      </div>
     </form>
   );
 }
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+/* ------------------------------------------------------------------ pieces */
+
+function StateDot({ state, required }: { state: "done" | "todo" | "empty"; required: boolean }) {
+  if (state === "done") {
+    return (
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+      </span>
+    );
+  }
+  return (
+    <span
+      className={cn(
+        "h-4 w-4 shrink-0 rounded-full border-2",
+        required && state === "todo" ? "border-destructive" : "border-border",
+      )}
+    />
+  );
+}
+
+function Section({
+  id,
+  index,
+  title,
+  description,
+  icon: Icon,
+  count,
+  onAdd,
+  addLabel,
+  emptyLabel,
+  ai,
+  children,
+}: {
+  id: SectionId;
+  index: number;
+  title: string;
+  description?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  count?: number;
+  onAdd?: () => void;
+  addLabel?: string;
+  emptyLabel?: string;
+  ai?: {
+    loading: boolean;
+    disabled: boolean;
+    onRun: () => void;
+    canUndo: boolean;
+    onUndo: () => void;
+  };
+  children?: React.ReactNode;
+}) {
+  const isEmpty = count === 0;
+
+  return (
+    <Card id={`section-${id}`} className="scroll-mt-24 overflow-hidden">
+      <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow mb-1.5">
+            {String(index).padStart(2, "0")} · Section
+          </p>
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <Icon className="h-4 w-4 text-primary" />
+            {title}
+          </h2>
+          {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {ai?.canUndo && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={ai.onUndo}
+              className="gap-1.5 text-muted-foreground"
+            >
+              <Undo2 className="h-3.5 w-3.5" /> Undo
+            </Button>
+          )}
+          {ai && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={ai.onRun}
+              disabled={ai.loading || ai.disabled}
+              title={
+                ai.disabled
+                  ? "Add a point first, then tidy the wording"
+                  : "Rewrites your rough notes into clear MOM language. Your points stay — only the wording changes."
+              }
+              className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              {ai.loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              {ai.loading ? "Tidying…" : "Tidy wording"}
+            </Button>
+          )}
+          {onAdd && (
+            <Button type="button" size="sm" onClick={onAdd} className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" /> {addLabel}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2.5 p-5">
+        {isEmpty && emptyLabel ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+            {emptyLabel} <span className="font-medium text-primary">{addLabel}</span>
+          </button>
+        ) : (
+          <>
+            {children}
+            {onAdd && (count ?? 0) > 2 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onAdd}
+                className="w-full gap-1.5 border border-dashed border-border text-muted-foreground"
+              >
+                <Plus className="h-3.5 w-3.5" /> {addLabel}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function Row({
+  children,
+  onRemove,
+  removeLabel,
+}: {
+  children: React.ReactNode;
+  onRemove: () => void;
+  removeLabel: string;
+}) {
+  return (
+    <div className="group flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 transition-colors focus-within:border-primary/40 hover:bg-muted/70">
+      <div className="min-w-0 flex-1">{children}</div>
+      <Button
+        type="button"
+        size="icon"
+        variant="ghost"
+        onClick={onRemove}
+        aria-label={removeLabel}
+        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className,
+  required,
+  error,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+  required?: boolean;
+  error?: string;
+}) {
   return (
     <div className={className}>
-      <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">{label}</Label>
+      <Label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+        {label}
+        {required && <span className="text-primary">*</span>}
+      </Label>
       {children}
+      {error && <p className="mt-1.5 text-xs font-medium text-destructive">{error}</p>}
+    </div>
+  );
+}
+
+function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
+}) {
+  return (
+    <div className="inline-flex h-9 w-full rounded-md border border-input bg-background p-0.5">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "flex-1 rounded-[0.3rem] px-2 text-sm font-medium transition-colors",
+            value === o.value
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -323,262 +982,203 @@ function Field({ label, children, className }: { label: string; children: React.
 function ModuleSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger><SelectValue /></SelectTrigger>
+      <SelectTrigger aria-label="Module">
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
-        {MODULES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+        {MODULES.map((m) => (
+          <SelectItem key={m} value={m}>
+            <ModuleChip module={m} />
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
 }
 
-function DynamicSection<T>({
-  title, icon: Icon, hint, items, onChange, render, empty, addLabel, bottomAddLabel, aiLoading, onAiPolish,
-}: {
-  title: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  hint?: string;
-  items: T[];
-  onChange: (v: T[]) => void;
-  render: (item: T, set: (next: T) => void) => React.ReactNode;
-  empty: T;
-  addLabel: string;
-  bottomAddLabel?: string;
-  aiLoading?: boolean;
-  onAiPolish?: () => void;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-        <div className="flex-1 min-w-0">
-          <CardTitle className="flex items-center gap-2 text-base">
-            {Icon && <Icon className="h-4 w-4 text-primary" />}
-            {title}
-          </CardTitle>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-        </div>
-        <div className="flex flex-col items-stretch gap-2 shrink-0 sm:flex-row sm:items-center">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => onChange([...items, structuredClone(empty)])}
-            className="gap-1.5"
-          >
-            <Plus className="h-3.5 w-3.5" /> {addLabel}
-          </Button>
-          {onAiPolish && (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    onClick={onAiPolish}
-                    disabled={aiLoading || items.length === 0}
-                    className="gap-1.5 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-md ring-1 ring-primary/40 hover:from-primary/90 hover:to-primary/70 hover:shadow-lg disabled:opacity-60"
-                  >
-                    {aiLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-4 w-4" />
-                    )}
-                    {aiLoading ? "Polishing…" : "✨ Auto-format with AI"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="text-xs leading-relaxed">
-                    Sends your rough notes to AI and rewrites them into clear,
-                    professional MOM language. Your points stay — only the
-                    wording improves.
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {items.length === 0 && (
-          <p className="text-sm text-muted-foreground">No items yet. Click <span className="font-medium">{addLabel}</span> to add rough notes.</p>
-        )}
-        {onAiPolish && items.length > 0 && (
-          <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 px-3 py-2 text-xs text-primary">
-            ✨ Ready to polish? Click <span className="font-semibold">Auto-format with AI</span> above to rewrite your rough notes into clean, professional wording.
-          </div>
-        )}
-        {items.map((item, i) => (
-          <div key={i} className="flex items-start gap-2 rounded-md border border-border bg-muted/20 p-3 transition-colors hover:bg-muted/35">
-            <div className="flex-1">
-              {render(item, (next) => {
-                const copy = items.slice();
-                copy[i] = next;
-                onChange(copy);
-              })}
-            </div>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              onClick={() => onChange(items.filter((_, idx) => idx !== i))}
-              aria-label="Remove"
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </div>
-        ))}
-        {bottomAddLabel && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onChange([...items, structuredClone(empty)])}
-            className="w-full gap-1.5 border-dashed hover:bg-muted/50"
-          >
-            <Plus className="h-3.5 w-3.5" /> {bottomAddLabel}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+/* ------------------------------------------------------------------ photos */
+
+type PhotosHandle = { addFiles: (files: File[]) => void };
 
 function PhotosSection({
   photos,
   onChange,
+  error,
+  ref,
 }: {
   photos: MomPhoto[];
   onChange: (v: MomPhoto[]) => void;
+  error?: string;
+  ref?: React.Ref<PhotosHandle>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const latest = useRef(photos);
+  latest.current = photos;
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setUploading(true);
-    const added: MomPhoto[] = [];
-    try {
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) {
-          toast.error(`${file.name}: not an image`);
-          continue;
+  const addFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return;
+      setUploading(true);
+      const added: MomPhoto[] = [];
+      try {
+        for (const file of files) {
+          if (!file.type.startsWith("image/")) {
+            toast.error(`${file.name} isn't an image.`);
+            continue;
+          }
+          if (file.size > 8 * 1024 * 1024) {
+            toast.error(`${file.name} is over 8 MB.`);
+            continue;
+          }
+          const ext = file.name.split(".").pop() || "jpg";
+          const path = `${crypto.randomUUID()}.${ext}`;
+          const { error: upErr } = await supabase.storage
+            .from("mom-photos")
+            .upload(path, file, { cacheControl: "3600", upsert: false });
+          if (upErr) {
+            toast.error(`${file.name}: ${upErr.message}`);
+            continue;
+          }
+          const { data: signed, error: sErr } = await supabase.storage
+            .from("mom-photos")
+            .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+          if (sErr || !signed) {
+            toast.error(`${file.name}: couldn't get a link.`);
+            continue;
+          }
+          added.push({ path, url: signed.signedUrl });
         }
-        if (file.size > 8 * 1024 * 1024) {
-          toast.error(`${file.name}: exceeds 8MB`);
-          continue;
+        if (added.length) {
+          onChange([...latest.current, ...added]);
+          toast.success(`Added ${added.length} photo${added.length > 1 ? "s" : ""}`);
         }
-        const ext = file.name.split(".").pop() || "jpg";
-        const path = `${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("mom-photos")
-          .upload(path, file, { cacheControl: "3600", upsert: false });
-        if (upErr) {
-          toast.error(`${file.name}: ${upErr.message}`);
-          continue;
-        }
-        const { data: signed, error: sErr } = await supabase.storage
-          .from("mom-photos")
-          .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-        if (sErr || !signed) {
-          toast.error(`${file.name}: could not get URL`);
-          continue;
-        }
-        added.push({ path, url: signed.signedUrl });
+      } finally {
+        setUploading(false);
+        if (inputRef.current) inputRef.current.value = "";
       }
-      if (added.length) {
-        onChange([...photos, ...added]);
-        toast.success(`Uploaded ${added.length} photo${added.length > 1 ? "s" : ""}`);
-      }
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
-  };
+    },
+    [onChange],
+  );
+
+  useImperativeHandle(ref, () => ({ addFiles: (files) => void addFiles(files) }), [addFiles]);
 
   const remove = async (i: number) => {
     const p = photos[i];
     try {
       await supabase.storage.from("mom-photos").remove([p.path]);
     } catch {
-      /* ignore */
+      /* the record matters more than an orphaned file */
     }
     onChange(photos.filter((_, idx) => idx !== i));
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-3">
-        <div className="flex-1 min-w-0">
-          <CardTitle className="flex items-center gap-2 text-base">
+    <Card id="section-photos" className="scroll-mt-24 overflow-hidden">
+      <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow mb-1.5">06 · Section</p>
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
             <ImagePlus className="h-4 w-4 text-primary" />
-            Photos *
-          </CardTitle>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Attach photos from the visit (whiteboard notes, site pictures, screenshots). Max 8MB each. At least one photo is required.
+            Photos <span className="text-primary">*</span>
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Whiteboards, screens, the room. At least one is required — drag files in or paste a
+            screenshot.
           </p>
         </div>
-        <div className="shrink-0">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(e) => void handleFiles(e.target.files)}
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => inputRef.current?.click()}
-            disabled={uploading}
-            className="gap-1.5"
-          >
-            {uploading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Plus className="h-3.5 w-3.5" />
-            )}
-            {uploading ? "Uploading…" : "Add Photos"}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {photos.length === 0 ? (
-          <p className="text-sm text-destructive">No photos yet. Please add at least one photo.</p>
-        ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-            {photos.map((p, i) => (
-              <div
-                key={p.path}
-                className="group relative overflow-hidden rounded-md border border-border bg-muted/20"
-              >
-                <img
-                  src={p.url}
-                  alt={p.caption || `Photo ${i + 1}`}
-                  className="aspect-square w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => void remove(i)}
-                  className="absolute right-1.5 top-1.5 rounded-full bg-black/60 p-1 text-white opacity-0 transition-opacity hover:bg-black/80 group-hover:opacity-100"
-                  aria-label="Remove photo"
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => void addFiles(Array.from(e.target.files ?? []))}
+        />
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="shrink-0 gap-1.5"
+        >
+          {uploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Plus className="h-3.5 w-3.5" />
+          )}
+          {uploading ? "Uploading…" : "Add photos"}
+        </Button>
+      </div>
+
+      <div className="p-5">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            void addFiles(Array.from(e.dataTransfer.files));
+          }}
+          className={cn(
+            "rounded-lg border border-dashed transition-colors",
+            dragging ? "border-primary bg-primary/5" : "border-border",
+            photos.length ? "p-3" : "p-0",
+          )}
+        >
+          {photos.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              className="flex w-full flex-col items-center gap-2 px-4 py-10 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ImagePlus className="h-5 w-5" />
+              <span>
+                Drop photos here, paste a screenshot, or{" "}
+                <span className="font-medium text-primary">browse your files</span>
+              </span>
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {photos.map((p, i) => (
+                <div
+                  key={p.path}
+                  className="group relative overflow-hidden rounded-lg border border-border bg-card"
                 >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-                <Input
-                  placeholder="Caption (optional)"
-                  value={p.caption ?? ""}
-                  onChange={(e) => {
-                    const copy = photos.slice();
-                    copy[i] = { ...p, caption: e.target.value };
-                    onChange(copy);
-                  }}
-                  className="h-8 rounded-none border-0 border-t border-border text-xs"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
+                  <img
+                    src={p.url}
+                    alt={p.caption || `Photo ${i + 1}`}
+                    className="aspect-square w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void remove(i)}
+                    className="absolute right-1.5 top-1.5 rounded-full bg-foreground/70 p-1 text-background opacity-0 transition-opacity hover:bg-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                    aria-label={`Remove photo ${i + 1}`}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                  <Input
+                    placeholder="Caption (optional)"
+                    value={p.caption ?? ""}
+                    onChange={(e) => {
+                      const copy = photos.slice();
+                      copy[i] = { ...p, caption: e.target.value };
+                      onChange(copy);
+                    }}
+                    className="h-8 rounded-none border-0 border-t border-border text-xs shadow-none focus-visible:ring-0"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        {error && <p className="mt-2 text-xs font-medium text-destructive">{error}</p>}
+      </div>
     </Card>
   );
 }
@@ -600,7 +1200,7 @@ function PendingAttachments({
     try {
       for (const file of Array.from(files)) {
         if (file.size > 15 * 1024 * 1024) {
-          toast.error(`${file.name}: exceeds 15MB`);
+          toast.error(`${file.name} is over 15 MB.`);
           continue;
         }
         const ext = file.name.split(".").pop() || "bin";
@@ -616,7 +1216,7 @@ function PendingAttachments({
           .from("mom-photos")
           .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
         if (sErr || !signed) {
-          toast.error(`${file.name}: could not get URL`);
+          toast.error(`${file.name}: couldn't get a link.`);
           continue;
         }
         added.push({ path, url: signed.signedUrl, name: file.name });
@@ -642,54 +1242,52 @@ function PendingAttachments({
   };
 
   return (
-    <div className="rounded-md border border-dashed border-border bg-background/40 p-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={inputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={(e) => void handleFiles(e.target.files)}
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="h-7 gap-1.5 text-xs"
-        >
-          {uploading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <ImagePlus className="h-3 w-3" />
-          )}
-          {uploading ? "Uploading…" : "Attach sample from client"}
-        </Button>
-        {value.length === 0 && (
-          <span className="text-xs text-muted-foreground">
-            Optional — attach a file/sample received from the client for this pending item.
-          </span>
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => void handleFiles(e.target.files)}
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+      >
+        {uploading ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Paperclip className="h-3 w-3" />
         )}
-        {value.map((a, i) => (
-          <span
-            key={a.path}
-            className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+        {uploading ? "Uploading…" : "Attach a file from the client"}
+      </Button>
+      {value.map((a, i) => (
+        <span
+          key={a.path}
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-xs"
+        >
+          <a
+            href={a.url}
+            target="_blank"
+            rel="noreferrer"
+            className="max-w-[180px] truncate hover:underline"
           >
-            <a href={a.url} target="_blank" rel="noreferrer" className="max-w-[180px] truncate hover:underline">
-              📎 {a.name || "file"}
-            </a>
-            <button
-              type="button"
-              onClick={() => void remove(i)}
-              className="text-muted-foreground hover:text-destructive"
-              aria-label="Remove attachment"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-      </div>
+            {a.name || "file"}
+          </a>
+          <button
+            type="button"
+            onClick={() => void remove(i)}
+            className="text-muted-foreground hover:text-destructive"
+            aria-label={`Remove ${a.name || "attachment"}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
     </div>
   );
 }

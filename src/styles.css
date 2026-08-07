@@ -5,12 +5,16 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Design system definition.
+ * MOM Portal design system.
+ *
+ * The palette is taken straight off the Okie Dokie seal (the favicon/logo):
+ *   #EE6723  orange  — the seal's inner disc       -> primary
+ *   #7C1D13  maroon  — the seal's ring lettering   -> document ink / seal surfaces
+ *   #FFDE56  gold    — the two stars on the seal   -> "needs attention" only
+ *   #FEEFEC  blush   — the seal's highlight        -> warm paper background
  *
  * The @theme inline block maps CSS custom properties to Tailwind utility
  * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
  * All colors MUST use oklch format.
  *
  * To add a new semantic color:
@@ -26,6 +30,11 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+
+  --font-display: "Gabarito", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -46,6 +55,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+
+  /* Brand semantics */
+  --color-seal: var(--seal);
+  --color-seal-foreground: var(--seal-foreground);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-success: var(--success);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -62,74 +79,103 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.75rem;
+
+  --background: oklch(0.9759 0.0076 61.45); /* #FBF6F2 warm paper */
+  --foreground: oklch(0.227 0.0334 29.13); /* #2A1613 warm ink */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --card-foreground: oklch(0.227 0.0334 29.13);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.475 0.18 268);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
+  --popover-foreground: oklch(0.227 0.0334 29.13);
+
+  --primary: oklch(0.6726 0.1829 43.18); /* #EE6723 seal orange */
+  --primary-foreground: oklch(1 0 0);
+
+  --secondary: oklch(0.9585 0.0203 53.26); /* #FDEEE5 */
+  --secondary-foreground: oklch(0.3889 0.1313 30.05);
+
+  --muted: oklch(0.9585 0.0203 53.26);
+  --muted-foreground: oklch(0.5536 0.0435 36.26); /* #8A6A61 */
+
+  --accent: oklch(0.9251 0.0354 49.23); /* #FBE0D2 */
+  --accent-foreground: oklch(0.3889 0.1313 30.05);
+
+  --destructive: oklch(0.5433 0.174 29.7); /* #C0392B */
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.9126 0.0188 51.96); /* #EDDFD7 */
+  --input: oklch(0.9126 0.0188 51.96);
+  --ring: oklch(0.6726 0.1829 43.18);
+
+  --seal: oklch(0.3889 0.1313 30.05); /* #7C1D13 maroon */
+  --seal-foreground: oklch(0.9759 0.0076 61.45);
+  --gold: oklch(0.9042 0.1548 95.39); /* #FFDE56 */
+  --gold-foreground: oklch(0.3109 0.104 29.75);
+  --success: oklch(0.5173 0.1026 161.42);
+
+  --chart-1: oklch(0.6726 0.1829 43.18);
+  --chart-2: oklch(0.5144 0.0822 233.34);
+  --chart-3: oklch(0.5173 0.1026 161.42);
+  --chart-4: oklch(0.6521 0.1322 81.57);
+  --chart-5: oklch(0.3889 0.1313 30.05);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.227 0.0334 29.13);
+  --sidebar-primary: oklch(0.6726 0.1829 43.18);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.9585 0.0203 53.26);
+  --sidebar-accent-foreground: oklch(0.3889 0.1313 30.05);
+  --sidebar-border: oklch(0.9126 0.0188 51.96);
+  --sidebar-ring: oklch(0.6726 0.1829 43.18);
 }
 
 .dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.65 0.19 268);
-  --primary-foreground: oklch(0.129 0.042 264.695);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --background: oklch(0.1854 0.0181 37.37); /* #1A100D */
+  --foreground: oklch(0.9575 0.0126 56.25); /* #F8EFE9 */
+  --card: oklch(0.2201 0.0226 37.81); /* #241713 */
+  --card-foreground: oklch(0.9575 0.0126 56.25);
+  --popover: oklch(0.2201 0.0226 37.81);
+  --popover-foreground: oklch(0.9575 0.0126 56.25);
+
+  --primary: oklch(0.7404 0.1669 43.87); /* #FF834A */
+  --primary-foreground: oklch(0.1854 0.0181 37.37);
+
+  --secondary: oklch(0.2658 0.0318 38.27); /* #33201A */
+  --secondary-foreground: oklch(0.9575 0.0126 56.25);
+
+  --muted: oklch(0.2658 0.0318 38.27);
+  --muted-foreground: oklch(0.7089 0.0331 43.03); /* #B49B91 */
+
+  --accent: oklch(0.2913 0.0325 37.39); /* #3A2620 */
+  --accent-foreground: oklch(0.9575 0.0126 56.25);
+
+  --destructive: oklch(0.7113 0.148 28.77); /* #F07A6B */
+  --destructive-foreground: oklch(0.1854 0.0181 37.37);
+
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7404 0.1669 43.87);
+
+  --seal: oklch(0.3109 0.104 29.75);
+  --seal-foreground: oklch(0.9575 0.0126 56.25);
+  --gold: oklch(0.9042 0.1548 95.39);
+  --gold-foreground: oklch(0.1854 0.0181 37.37);
+  --success: oklch(0.696 0.12 161.48);
+
+  --chart-1: oklch(0.7404 0.1669 43.87);
+  --chart-2: oklch(0.65 0.0822 233.34);
+  --chart-3: oklch(0.696 0.12 161.48);
+  --chart-4: oklch(0.8 0.14 85);
+  --chart-5: oklch(0.72 0.11 30);
+
+  --sidebar: oklch(0.2201 0.0226 37.81);
+  --sidebar-foreground: oklch(0.9575 0.0126 56.25);
+  --sidebar-primary: oklch(0.7404 0.1669 43.87);
+  --sidebar-primary-foreground: oklch(0.1854 0.0181 37.37);
+  --sidebar-accent: oklch(0.2913 0.0325 37.39);
+  --sidebar-accent-foreground: oklch(0.9575 0.0126 56.25);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.7404 0.1669 43.87);
 }
 
 @layer base {
@@ -137,8 +183,175 @@
     border-color: var(--color-border);
   }
 
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  /* One consistent, always-visible keyboard focus ring. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* iOS zooms any field under 16px on focus, which wrecks form entry on a
+     phone — and this form is mostly filled on phones after a campus visit. */
+  @media (max-width: 640px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* Small uppercase mono label for section eyebrows and data captions. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+
+  .tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Hairline ruled-paper texture — reads as a record book, adds no chrome. */
+  .paper-rule {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--color-border) 60%, transparent) 0 1px,
+      transparent 1px 100%
+    );
+    background-size: 100% 2rem;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Module chips. Every discussion point, completed task and pending item is
+   tagged with an ERP module, so the module tag is the main thing a reader
+   scans by. Giving each module a fixed colour makes a long MOM readable at a
+   glance. Driven by a data attribute so it works in SSR and in both themes.
+   --------------------------------------------------------------------------- */
+[data-module] {
+  --chip: var(--color-muted-foreground);
+}
+
+.module-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklch, var(--chip) 30%, transparent);
+  background: color-mix(in oklch, var(--chip) 12%, transparent);
+  color: var(--chip);
+  padding: 0.125rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.module-chip::before {
+  content: "";
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--chip);
+}
+
+[data-module="Admission"] { --chip: #c2551a; }
+[data-module="SIS"] { --chip: #2f6f8f; }
+[data-module="Fee"] { --chip: #1f7a55; }
+[data-module="Transport"] { --chip: #8a5a1f; }
+[data-module="HR"] { --chip: #7a3fa0; }
+[data-module="Examination"] { --chip: #a82f52; }
+[data-module="Mobile App"] { --chip: #2a5fb8; }
+[data-module="Website"] { --chip: #0e7c86; }
+[data-module="Other"] { --chip: #6b5a52; }
+
+.dark [data-module="Admission"] { --chip: #ff9a5e; }
+.dark [data-module="SIS"] { --chip: #79bfdd; }
+.dark [data-module="Fee"] { --chip: #63c79b; }
+.dark [data-module="Transport"] { --chip: #dda85c; }
+.dark [data-module="HR"] { --chip: #c89ae4; }
+.dark [data-module="Examination"] { --chip: #f08fa6; }
+.dark [data-module="Mobile App"] { --chip: #8cb0f0; }
+.dark [data-module="Website"] { --chip: #5fc9d2; }
+.dark [data-module="Other"] { --chip: #c0aaa0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Print. The detail page is a client-facing document, so Print should produce
+   the document and none of the app around it.
+   --------------------------------------------------------------------------- */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  .print-document {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .print-document [data-doc-card] {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  a[href]::after {
+    content: "";
   }
 }

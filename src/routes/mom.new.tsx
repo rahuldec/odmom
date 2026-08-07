@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, PageHeader } from "@/components/app-shell";
 import { MomForm } from "@/components/mom-form";
 import { Button } from "@/components/ui/button";
 import { createMom } from "@/lib/mom.functions";
@@ -20,21 +20,31 @@ function NewPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex items-center gap-3">
-        <Link to="/"><Button variant="ghost" size="sm" className="gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button></Link>
-        <h1 className="text-2xl font-semibold tracking-tight">New Minutes of Meeting</h1>
-      </div>
+      <Link to="/" className="mb-4 inline-block">
+        <Button variant="ghost" size="sm" className="gap-1 -ml-2 text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> All meetings
+        </Button>
+      </Link>
+
+      <PageHeader
+        eyebrow="New record"
+        title="Write up a meeting"
+        description="Rough notes are fine. Tidy the wording per section, add photos, and save — the PDF is generated from this."
+      />
+
       <MomForm
         submitLabel="Create MOM"
         submitting={busy}
+        draftKey="odmom:draft:new"
         onSubmit={async (input) => {
           setBusy(true);
           try {
             const { id } = await create({ data: input });
             toast.success("MOM created");
-            router.navigate({ to: "/mom/$id", params: { id } });
+            await router.navigate({ to: "/mom/$id", params: { id } });
           } catch (e) {
-            toast.error(e instanceof Error ? e.message : "Failed");
+            toast.error(e instanceof Error ? e.message : "Couldn't save. Check your connection.");
+            throw e;
           } finally {
             setBusy(false);
           }

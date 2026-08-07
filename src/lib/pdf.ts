@@ -94,20 +94,24 @@ export async function downloadMomPdf(mom: MOM) {
   const contentW = pageWidth - margin * 2;
 
   // ── Palette ────────────────────────────────────────────────────────────
-  const NAVY: [number, number, number] = [17, 28, 51];
-  const NAVY_SOFT: [number, number, number] = [30, 45, 74];
-  const ORANGE: [number, number, number] = [234, 112, 24];
-  const ORANGE_LIGHT: [number, number, number] = [253, 233, 217];
+  // Taken off the Okie Dokie seal so the PDF the client receives matches the
+  // portal it was written in: maroon ring lettering, orange disc, gold stars.
+  const MAROON: [number, number, number] = [124, 29, 19]; // #7C1D13
+  const MAROON_DEEP: [number, number, number] = [90, 19, 12]; // #5A130C
+  const ORANGE: [number, number, number] = [238, 103, 35]; // #EE6723
+  const ORANGE_LIGHT: [number, number, number] = [253, 238, 229]; // #FDEEE5
   const WHITE: [number, number, number] = [255, 255, 255];
-  const SLATE: [number, number, number] = [110, 122, 142];
-  const SLATE_LIGHT: [number, number, number] = [148, 159, 176];
-  const INK: [number, number, number] = [28, 31, 38];
-  const LINE: [number, number, number] = [228, 231, 237];
-  const ROW_TINT: [number, number, number] = [247, 248, 251];
-  const GREEN_BG: [number, number, number] = [223, 242, 230];
-  const GREEN_TX: [number, number, number] = [22, 121, 73];
-  const BLUE_BG: [number, number, number] = [222, 233, 250];
-  const BLUE_TX: [number, number, number] = [27, 86, 168];
+  const SLATE: [number, number, number] = [138, 106, 97]; // warm muted ink
+  const SLATE_LIGHT: [number, number, number] = [232, 201, 191]; // muted on maroon
+  const INK: [number, number, number] = [42, 22, 19]; // #2A1613
+  const LINE: [number, number, number] = [237, 223, 215]; // #EDDFD7
+  const ROW_TINT: [number, number, number] = [251, 246, 242]; // #FBF6F2
+  // Gold means one thing here and in the portal: waiting on Okie Dokie.
+  const GOLD: [number, number, number] = [255, 222, 86]; // #FFDE56 the seal's stars
+  const GOLD_BG: [number, number, number] = [255, 243, 199];
+  const GOLD_TX: [number, number, number] = [124, 86, 0];
+  const NEUTRAL_BG: [number, number, number] = [242, 234, 228];
+  const NEUTRAL_TX: [number, number, number] = [107, 85, 77];
 
   const logo = await loadLogo();
   const loadedPhotos = await Promise.all(mom.photos.map((p) => loadImage(p.url)));
@@ -116,10 +120,10 @@ export async function downloadMomPdf(mom: MOM) {
   const headerH = 96;
 
   const drawHeader = () => {
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(...MAROON);
     doc.rect(0, 0, pageWidth, headerH, "F");
 
-    doc.setFillColor(...NAVY_SOFT);
+    doc.setFillColor(...MAROON_DEEP);
     doc.rect(0, headerH - 8, pageWidth, 8, "F");
 
     doc.setFillColor(...ORANGE);
@@ -130,9 +134,9 @@ export async function downloadMomPdf(mom: MOM) {
     const logoY = (headerH - logoSize) / 2 - 2;
     if (logo) {
       // The source PNG has a transparent (not white) background outside its
-      // colored strokes, so on the navy header those "white" areas show navy
-      // through them. Paint a white backing disc sized to the badge's visible
-      // ring (~39% of the image box) before placing the logo to restore it.
+      // colored strokes, so on the maroon header those "white" areas show the
+      // maroon through them. Paint a white backing disc sized to the badge's
+      // visible ring (~39% of the image box) before placing the logo.
       const cx = logoX + logoSize / 2;
       const cy = logoY + logoSize / 2;
       doc.setFillColor(...WHITE);
@@ -154,7 +158,7 @@ export async function downloadMomPdf(mom: MOM) {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(...ORANGE);
+    doc.setTextColor(...GOLD);
     doc.text("MINUTES OF MEETING", pageWidth - margin, headerH / 2 + 3, { align: "right" });
   };
 
@@ -163,15 +167,24 @@ export async function downloadMomPdf(mom: MOM) {
   // ── Title strip ───────────────────────────────────────────────────────
   let y = headerH + 30;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(...INK);
-  doc.text(`Meeting with ${mom.client_name}`, margin, y);
-
+  // Draw the date first so the title can be wrapped inside whatever width is
+  // left — long institute names used to run straight through it.
+  const dateLabel = formatDate(mom.meeting_date);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...SLATE);
-  doc.text(formatDate(mom.meeting_date), pageWidth - margin, y, { align: "right" });
+  doc.text(dateLabel, pageWidth - margin, y, { align: "right" });
+  const dateW = doc.getTextWidth(dateLabel);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(...INK);
+  const titleLines: string[] = doc.splitTextToSize(
+    `Meeting with ${mom.client_name}`,
+    contentW - dateW - 18,
+  );
+  doc.text(titleLines, margin, y);
+  y += (titleLines.length - 1) * 21;
 
   y += 8;
   doc.setDrawColor(...ORANGE);
@@ -194,7 +207,7 @@ export async function downloadMomPdf(mom: MOM) {
     ensureSpace(34);
 
     const chipSize = 18;
-    doc.setFillColor(...NAVY);
+    doc.setFillColor(...MAROON);
     doc.roundedRect(margin, y - 13, chipSize, chipSize, 3, 3, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
@@ -205,7 +218,7 @@ export async function downloadMomPdf(mom: MOM) {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11.5);
-    doc.setTextColor(...NAVY);
+    doc.setTextColor(...MAROON);
     doc.text(title.toUpperCase(), margin + chipSize + 10, y);
 
     y += 8;
@@ -226,7 +239,7 @@ export async function downloadMomPdf(mom: MOM) {
       valign: "middle" as const,
     },
     headStyles: {
-      fillColor: NAVY as [number, number, number],
+      fillColor: MAROON as [number, number, number],
       textColor: WHITE as [number, number, number],
       fontStyle: "bold" as const,
       fontSize: 8.5,
@@ -244,7 +257,7 @@ export async function downloadMomPdf(mom: MOM) {
   // Hero row: Client / Institute as a prominent banner card with orange accent.
   const heroH = 46;
   ensureSpace(heroH + 14);
-  doc.setFillColor(...NAVY);
+  doc.setFillColor(...MAROON);
   doc.roundedRect(margin, y - 4, contentW, heroH, 5, 5, "F");
   doc.setFillColor(...ORANGE);
   doc.rect(margin, y - 4, 5, heroH, "F");
@@ -277,7 +290,7 @@ export async function downloadMomPdf(mom: MOM) {
 
   const statCards: [string, string][] = [
     ["MEETING DATE", formatDate(mom.meeting_date)],
-    ["MEETING TYPE", mom.meeting_type === "online" ? "Online" : "Offline"],
+    ["MEETING TYPE", mom.meeting_type === "online" ? "Online" : "On site"],
     ["ATTENDEES", String(mom.attendees.length || 0)],
   ];
 
@@ -299,7 +312,7 @@ export async function downloadMomPdf(mom: MOM) {
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.setTextColor(...NAVY);
+    doc.setTextColor(...MAROON);
     doc.text(value, cx + 14, y + 35);
   });
 
@@ -326,8 +339,8 @@ export async function downloadMomPdf(mom: MOM) {
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index === 2) {
           const isOdc = String(data.cell.raw) === "Okie Dokie Team";
-          data.cell.styles.fillColor = isOdc ? BLUE_BG : ORANGE_LIGHT;
-          data.cell.styles.textColor = isOdc ? BLUE_TX : [180, 83, 9];
+          data.cell.styles.fillColor = isOdc ? ORANGE_LIGHT : NEUTRAL_BG;
+          data.cell.styles.textColor = isOdc ? MAROON : NEUTRAL_TX;
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fontSize = 7.5;
         }
@@ -381,8 +394,8 @@ export async function downloadMomPdf(mom: MOM) {
       didParseCell: (data) => {
         if (data.section === "body" && data.column.index === 2) {
           const isOdc = String(data.cell.raw) === "Okie Dokie Team";
-          data.cell.styles.fillColor = isOdc ? BLUE_BG : GREEN_BG;
-          data.cell.styles.textColor = isOdc ? BLUE_TX : GREEN_TX;
+          data.cell.styles.fillColor = isOdc ? GOLD_BG : NEUTRAL_BG;
+          data.cell.styles.textColor = isOdc ? GOLD_TX : NEUTRAL_TX;
           data.cell.styles.fontStyle = "bold";
           data.cell.styles.fontSize = 8;
         }
@@ -444,18 +457,6 @@ export async function downloadMomPdf(mom: MOM) {
 
       y = rowY + boxH + captionGap + rowGap;
     }
-  }
-
-  // ── Conclusion ───────────────────────────────────────────────────────────
-  if (mom.summary) {
-    section("Conclusion");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(...INK);
-    const lines = doc.splitTextToSize(mom.summary, contentW - 8);
-    ensureSpace(lines.length * 14 + 10);
-    doc.text(lines, margin, y);
-    y += lines.length * 14 + 10;
   }
 
   // ── Signature block ──────────────────────────────────────────────────────

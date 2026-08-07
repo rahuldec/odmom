@@ -1,39 +1,62 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  ArrowLeft,
-  Download,
-  Pencil,
-  Printer,
-  Share2,
-} from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Download, Loader2, Pencil, Printer, Share2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { Seal } from "@/components/seal";
+import { ModuleChip } from "@/components/chips";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMom } from "@/lib/mom.functions";
+import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
+import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/mom/$id")({
-  head: () => ({ meta: [{ title: "MOM Detail — MOM Portal" }] }),
+  head: () => ({ meta: [{ title: "MOM — Okie Dokie" }] }),
   component: DetailPage,
 });
 
 function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
+  const [downloading, setDownloading] = useState(false);
+
   const { data: mom, isLoading } = useQuery({
     queryKey: ["mom", id],
     queryFn: () => get({ data: { id } }),
   });
 
   if (isLoading) {
-    return <AppShell><div className="py-20 text-center text-sm text-muted-foreground">Loading…</div></AppShell>;
+    return (
+      <AppShell>
+        <Card className="p-6">
+          <Skeleton className="h-28 w-full rounded-lg" />
+          <Skeleton className="mt-6 h-4 w-48" />
+          <Skeleton className="mt-3 h-4 w-full" />
+          <Skeleton className="mt-3 h-4 w-2/3" />
+        </Card>
+      </AppShell>
+    );
   }
+
   if (!mom) {
-    return <AppShell><Card className="p-10 text-center"><h2 className="text-base font-medium">MOM not found</h2></Card></AppShell>;
+    return (
+      <AppShell>
+        <Card className="px-6 py-16 text-center">
+          <h2 className="font-display text-lg font-semibold">This MOM no longer exists</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            It may have been deleted by someone else on the team.
+          </p>
+          <Link to="/" className="mt-5 inline-block">
+            <Button variant="outline">Go to all meetings</Button>
+          </Link>
+        </Card>
+      </AppShell>
+    );
   }
 
   const handleShare = async () => {
@@ -46,82 +69,107 @@ function DetailPage() {
         toast.success("Link copied");
       }
     } catch {
-      /* user cancelled */
+      /* dismissed */
     }
   };
 
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadMomPdf(mom);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't build the PDF. Try again.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const ours = (mom.pending_points ?? []).filter((p) => p.pending_with === "okie_dokie");
+  const theirs = (mom.pending_points ?? []).filter((p) => p.pending_with === "client");
+  const clientSide = mom.attendees.filter((a) => a.team === "client");
+  const odSide = mom.attendees.filter((a) => a.team === "okie_dokie");
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <Link to="/"><Button variant="ghost" size="sm" className="gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button></Link>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void downloadMomPdf(mom)}>
-            <Download className="h-4 w-4" /> Download PDF
+      <div data-print-hide className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <Link to="/">
+          <Button variant="ghost" size="sm" className="-ml-2 gap-1 text-muted-foreground">
+            <ArrowLeft className="h-4 w-4" /> All meetings
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}>
+        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => void handleDownload()}
+            disabled={downloading}
+          >
+            {downloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => window.print()}
+          >
             <Printer className="h-4 w-4" /> Print
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleShare}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void handleShare()}>
             <Share2 className="h-4 w-4" /> Share
           </Button>
           <Link to="/edit/$id" params={{ id }}>
-            <Button size="sm" className="gap-1.5"><Pencil className="h-4 w-4" /> Edit</Button>
+            <Button size="sm" className="gap-1.5 font-semibold">
+              <Pencil className="h-4 w-4" /> Edit
+            </Button>
           </Link>
         </div>
       </div>
 
-      <article className="space-y-6">
-        <Card className="overflow-hidden">
-          <div className="flex items-center gap-4 bg-slate-900 px-6 py-5 text-white dark:bg-slate-950">
-            <img
-              src="https://okiedokie-erp-images.s3.ap-south-1.amazonaws.com/Okie%20Dokie/2025/12/sourceURL/26aebcbe10f4ac5a3e8b-611ed1b9032568edd4f3-Okie_Dokie_App_icon__2___2_-removebg-preview.png"
-              alt="Okie Dokie Solutions"
-              className="h-12 w-12 shrink-0 object-contain"
-            />
-            <div>
-              <p className="text-xs uppercase tracking-wider text-slate-300">Minutes of Meeting</p>
-              <h1 className="mt-1 text-2xl font-semibold">{mom.client_name}</h1>
-              <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-200">
-                <span>{mom.meeting_date}</span>
-                <span className="capitalize">{mom.meeting_type}</span>
-                <span>{mom.employee_name}</span>
-                {mom.location && <span>{mom.location}</span>}
-              </div>
-            </div>
+      <article className="print-document space-y-5">
+        {/* Document masthead — the one place the seal appears at full size. */}
+        <Card data-doc-card className="relative overflow-hidden border-0 bg-seal text-seal-foreground">
+          <Seal
+            className="pointer-events-none absolute -right-8 -top-6 h-48 w-48 rotate-[8deg] text-seal-foreground/15"
+            text="MINUTES OF MEETING • OKIE DOKIE • "
+          />
+          <div className="relative px-6 py-7 sm:px-8 sm:py-9">
+            <p className="eyebrow text-seal-foreground/70">Minutes of meeting</p>
+            <h1 className="mt-2 max-w-[24ch] font-display text-3xl font-bold leading-tight sm:text-4xl">
+              {mom.client_name}
+            </h1>
+            <dl className="mt-5 flex flex-wrap gap-x-8 gap-y-3 text-sm">
+              <Meta label="Date" value={formatDay(mom.meeting_date)} mono />
+              <Meta
+                label="Format"
+                value={mom.meeting_type === "online" ? "Online" : "On site"}
+              />
+              <Meta label="Recorded by" value={mom.employee_name} />
+              {mom.location && <Meta label="Where" value={mom.location} />}
+            </dl>
           </div>
         </Card>
 
         {mom.attendees.length > 0 && (
-          <Section title="Attendees">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
-                <tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Designation</th><th className="px-3 py-2">Mobile</th><th className="px-3 py-2">Team</th></tr>
-              </thead>
-              <tbody>
-                {mom.attendees.map((a, i) => (
-                  <tr key={i} className="border-t border-border">
-                    <td className="px-3 py-2 font-medium">{a.name}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{a.designation}</td>
-                    <td className="px-3 py-2 text-muted-foreground">{a.mobile || "—"}</td>
-                    <td className="px-3 py-2">
-                      <Badge variant={a.team === "okie_dokie" ? "default" : "outline"}>
-                        {a.team === "okie_dokie" ? "Okie Dokie Team" : "Client"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Section title="Attendees" count={mom.attendees.length}>
+            <div className="grid gap-6 p-5 sm:grid-cols-2">
+              <AttendeeColumn heading="Client" people={clientSide} />
+              <AttendeeColumn heading="Okie Dokie" people={odSide} />
+            </div>
           </Section>
         )}
 
         {mom.discussion_points.length > 0 && (
-          <Section title="Discussion Points">
+          <Section title="Discussion points" count={mom.discussion_points.length}>
             <ul className="divide-y divide-border">
               {mom.discussion_points.map((d, i) => (
-                <li key={i} className="flex gap-4 px-3 py-3">
-                  <Badge variant="outline" className="h-fit shrink-0">{d.module}</Badge>
+                <li key={i} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:gap-4">
+                  <ModuleChip module={d.module} className="h-fit shrink-0" />
                   <p className="text-sm leading-relaxed">{d.details}</p>
                 </li>
               ))}
@@ -130,11 +178,11 @@ function DetailPage() {
         )}
 
         {mom.work_completed.length > 0 && (
-          <Section title="Work Completed">
+          <Section title="Work completed" count={mom.work_completed.length}>
             <ul className="divide-y divide-border">
               {mom.work_completed.map((w, i) => (
-                <li key={i} className="flex gap-4 px-3 py-3">
-                  <Badge variant="outline" className="h-fit shrink-0">{w.module}</Badge>
+                <li key={i} className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:gap-4">
+                  <ModuleChip module={w.module} className="h-fit shrink-0" />
                   <p className="text-sm leading-relaxed">{w.task}</p>
                 </li>
               ))}
@@ -142,49 +190,35 @@ function DetailPage() {
           </Section>
         )}
 
-        {mom.pending_points.length > 0 && (
-          <Section title="Pending Points">
-            <ul className="divide-y divide-border">
-              {mom.pending_points.map((p, i) => (
-                <li key={i} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-start sm:gap-4">
-                  <Badge variant="outline" className="h-fit shrink-0">{p.module}</Badge>
-                  <div className="flex-1 space-y-2">
-                    <p className="text-sm leading-relaxed">{p.requirement}</p>
-                    {p.attachments && p.attachments.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {p.attachments.map((a) => (
-                          <a
-                            key={a.path}
-                            href={a.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-foreground hover:bg-muted"
-                          >
-                            📎 {a.name || "Attachment"}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <span className="h-fit shrink-0 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                    Pending at {p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client"}
-                  </span>
-                </li>
-              ))}
-            </ul>
+        {(mom.pending_points ?? []).length > 0 && (
+          <Section title="Pending points" count={mom.pending_points.length}>
+            <div className="divide-y divide-border">
+              <PendingGroup
+                heading="Waiting on Okie Dokie"
+                tone="ours"
+                items={ours}
+              />
+              <PendingGroup heading="Waiting on the client" tone="theirs" items={theirs} />
+            </div>
+          </Section>
+        )}
+
+        {mom.summary && (
+          <Section title="Conclusion">
+            <p className="whitespace-pre-wrap px-5 py-4 text-sm leading-relaxed">{mom.summary}</p>
           </Section>
         )}
 
         {mom.photos && mom.photos.length > 0 && (
-          <Section title="Photos">
-            <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 md:grid-cols-4">
+          <Section title="Photos" count={mom.photos.length}>
+            <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 md:grid-cols-4">
               {mom.photos.map((p, i) => (
                 <a
                   key={p.path}
                   href={p.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="group block overflow-hidden rounded-md border border-border bg-muted/20"
+                  className="group block overflow-hidden rounded-lg border border-border bg-card"
                 >
                   <img
                     src={p.url}
@@ -192,7 +226,7 @@ function DetailPage() {
                     className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
                   />
                   {p.caption && (
-                    <p className="border-t border-border px-2 py-1 text-xs text-muted-foreground">
+                    <p className="border-t border-border px-2 py-1.5 text-xs text-muted-foreground">
                       {p.caption}
                     </p>
                   )}
@@ -202,26 +236,115 @@ function DetailPage() {
           </Section>
         )}
 
-
-        {mom.summary && (
-          <Section title="Conclusion">
-            <p className="whitespace-pre-wrap px-3 py-3 text-sm leading-relaxed">{mom.summary}</p>
-          </Section>
-        )}
-
-        <p className="pt-2 text-center text-xs text-muted-foreground">
-          Generated by Okie Dokie Solutions — MOM Portal
-        </p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <Seal className="h-9 w-9 text-muted-foreground/50" text="OKIE DOKIE • " ringOpacity={1} />
+          <p className="eyebrow">Recorded by Okie Dokie · MOM Portal</p>
+        </div>
       </article>
     </AppShell>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</CardTitle></CardHeader>
-      <CardContent className="p-0">{children}</CardContent>
+    <div>
+      <dt className="eyebrow text-seal-foreground/60">{label}</dt>
+      <dd className={`mt-1.5 ${mono ? "tabular" : ""}`}>{value}</dd>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card data-doc-card className="overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3">
+        <h2 className="font-display text-base font-semibold">{title}</h2>
+        {count !== undefined && <span className="eyebrow">{count}</span>}
+      </div>
+      {children}
     </Card>
+  );
+}
+
+function AttendeeColumn({ heading, people }: { heading: string; people: Attendee[] }) {
+  return (
+    <div>
+      <p className="eyebrow mb-3">{heading}</p>
+      {people.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nobody recorded.</p>
+      ) : (
+        <ul className="space-y-3">
+          {people.map((a, i) => (
+            <li key={i} className="text-sm">
+              <p className="font-medium">{a.name}</p>
+              <p className="text-muted-foreground">
+                {a.designation}
+                {a.mobile ? <span className="tabular"> · {a.mobile}</span> : null}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PendingGroup({
+  heading,
+  tone,
+  items,
+}: {
+  heading: string;
+  tone: "ours" | "theirs";
+  items: PendingPoint[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="px-5 py-4">
+      <p className="mb-3 flex items-center gap-2">
+        <span
+          className={
+            tone === "ours"
+              ? "h-2 w-2 rounded-full bg-gold"
+              : "h-2 w-2 rounded-full bg-muted-foreground/50"
+          }
+        />
+        <span className="eyebrow">{heading}</span>
+        <span className="eyebrow">· {plural(items.length, "item")}</span>
+      </p>
+      <ul className="space-y-3">
+        {items.map((p, i) => (
+          <li key={i} className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <ModuleChip module={p.module} className="h-fit shrink-0" />
+            <div className="flex-1 space-y-2">
+              <p className="text-sm leading-relaxed">{p.requirement}</p>
+              {p.attachments && p.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {p.attachments.map((a) => (
+                    <a
+                      key={a.path}
+                      href={a.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs hover:bg-secondary"
+                    >
+                      {a.name || "Attachment"}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

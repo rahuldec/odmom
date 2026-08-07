@@ -1,13 +1,16 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import { AppShell } from "@/components/app-shell";
+import { AppShell, PageHeader } from "@/components/app-shell";
 import { MomForm } from "@/components/mom-form";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getMom, updateMom } from "@/lib/mom.functions";
 import type { MOMInput } from "@/lib/mom-types";
+import { formatDay } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/edit/$id")({
@@ -18,6 +21,7 @@ export const Route = createFileRoute("/edit/$id")({
 function EditPage() {
   const { id } = Route.useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const get = useServerFn(getMom);
   const update = useServerFn(updateMom);
   const [busy, setBusy] = useState(false);
@@ -29,17 +33,42 @@ function EditPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex items-center gap-3">
-        <Link to="/mom/$id" params={{ id }}>
-          <Button variant="ghost" size="sm" className="gap-1"><ArrowLeft className="h-4 w-4" /> Back</Button>
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Edit MOM</h1>
-      </div>
-      {isLoading || !mom ? (
-        <div className="py-20 text-center text-sm text-muted-foreground">Loading…</div>
+      <Link to="/mom/$id" params={{ id }} className="mb-4 inline-block">
+        <Button variant="ghost" size="sm" className="-ml-2 gap-1 text-muted-foreground">
+          <ArrowLeft className="h-4 w-4" /> Back to the MOM
+        </Button>
+      </Link>
+
+      <PageHeader
+        eyebrow="Editing"
+        title={mom ? mom.client_name : "Edit MOM"}
+        description={
+          mom
+            ? `Meeting of ${formatDay(mom.meeting_date)}. Changes go live as soon as you save.`
+            : undefined
+        }
+      />
+
+      {isLoading ? (
+        <Card className="space-y-4 p-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </Card>
+      ) : !mom ? (
+        <Card className="px-6 py-16 text-center">
+          <h2 className="font-display text-lg font-semibold">This MOM no longer exists</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            It may have been deleted by someone else on the team.
+          </p>
+          <Link to="/" className="mt-5 inline-block">
+            <Button variant="outline">Go to all meetings</Button>
+          </Link>
+        </Card>
       ) : (
         <MomForm
-          submitLabel="Save Changes"
+          submitLabel="Save changes"
           submitting={busy}
           initial={{
             client_name: mom.client_name,
@@ -53,16 +82,18 @@ function EditPage() {
             work_completed: mom.work_completed,
             pending_points: mom.pending_points,
             photos: mom.photos ?? [],
-
           }}
           onSubmit={async (input: MOMInput) => {
             setBusy(true);
             try {
               await update({ data: { id, patch: input } });
-              toast.success("Saved");
-              router.navigate({ to: "/mom/$id", params: { id } });
+              toast.success("Changes saved");
+              await queryClient.invalidateQueries({ queryKey: ["mom", id] });
+              await queryClient.invalidateQueries({ queryKey: ["moms"] });
+              await router.navigate({ to: "/mom/$id", params: { id } });
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Failed");
+              toast.error(e instanceof Error ? e.message : "Couldn't save. Check your connection.");
+              throw e;
             } finally {
               setBusy(false);
             }
