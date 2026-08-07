@@ -14,6 +14,7 @@ import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
+import logoUrl from "@/logo.png";
 
 export const Route = createFileRoute("/mom/$id")({
   head: () => ({ meta: [{ title: "MOM — Okie Dokie" }] }),
