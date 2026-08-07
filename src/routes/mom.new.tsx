@@ -20,7 +20,7 @@ function NewPage() {
 
   return (
     <AppShell>
-      <Link to="/" className="mb-4 inline-block">
+      <Link to="/meetings" className="mb-4 inline-block">
         <Button variant="ghost" size="sm" className="gap-1 -ml-2 text-muted-foreground">
           <ArrowLeft className="h-4 w-4" /> All meetings
         </Button>

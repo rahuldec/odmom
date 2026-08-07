@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 import logoUrl from "@/logo.png";
 
 const NAV = [
-  { to: "/", label: "Meetings", icon: Rows3 },
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/meetings", label: "Meetings", icon: Rows3 },
 ] as const;
 
 const CHECKLIST_URL = "https://odchecklist.lovable.app/";
