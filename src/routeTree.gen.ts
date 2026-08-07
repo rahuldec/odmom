@@ -9,15 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as MeetingsRouteImport } from './routes/meetings'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MomNewRouteImport } from './routes/mom.new'
 import { Route as MomIdRouteImport } from './routes/mom.$id'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
 
-const DashboardRoute = DashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const MeetingsRoute = MeetingsRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,14 +43,14 @@ const EditIdRoute = EditIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/meetings': typeof MeetingsRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/meetings': typeof MeetingsRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
@@ -58,22 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/meetings': typeof MeetingsRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard' | '/edit/$id' | '/mom/$id' | '/mom/new'
+  fullPaths: '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/edit/$id' | '/mom/$id' | '/mom/new'
-  id: '__root__' | '/' | '/dashboard' | '/edit/$id' | '/mom/$id' | '/mom/new'
+  to: '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
+  id: '__root__' | '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  MeetingsRoute: typeof MeetingsRoute
   EditIdRoute: typeof EditIdRoute
   MomIdRoute: typeof MomIdRoute
   MomNewRoute: typeof MomNewRoute
@@ -81,11 +81,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/dashboard': {
-      id: '/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
+    '/meetings': {
+      id: '/meetings'
+      path: '/meetings'
+      fullPath: '/meetings'
+      preLoaderRoute: typeof MeetingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -121,7 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  MeetingsRoute: MeetingsRoute,
   EditIdRoute: EditIdRoute,
   MomIdRoute: MomIdRoute,
   MomNewRoute: MomNewRoute,
@@ -129,13 +129,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
