@@ -893,13 +893,15 @@ function Section({
         ) : (
           <>
             {children}
-            {onAdd && (count ?? 0) > 2 && (
+            {/* Footer add, from the first row onward — the header button is off
+                screen once a section grows, and it's the same action. */}
+            {onAdd && (count ?? 0) > 0 && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={onAdd}
-                className="w-full gap-1.5 border border-dashed border-border text-muted-foreground"
+                className="w-full gap-1.5 border border-dashed border-border text-muted-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
               >
                 <Plus className="h-3.5 w-3.5" /> {addLabel}
               </Button>
