@@ -6,17 +6,21 @@ import { cn } from "@/lib/utils";
  * disc. A MOM is a record that gets stamped and sent to a client, so the seal
  * is reused here as the one signature element of the interface. It appears at
  * most once per screen — masthead, empty state, or document header.
+ *
+ * The ring text sits on two arcs, not one. A single full-circle textPath puts
+ * the bottom half upside down; a real seal reverses the lower arc so both
+ * halves read left to right. Pass empty strings for a plain ring.
  */
 export function Seal({
-  text = "MINUTES OF MEETING • OKIE DOKIE • ",
+  topText = "MINUTES OF MEETING",
+  bottomText = "OKIE DOKIE",
   className,
   children,
-  ringOpacity = 1,
 }: {
-  text?: string;
+  topText?: string;
+  bottomText?: string;
   className?: string;
   children?: React.ReactNode;
-  ringOpacity?: number;
 }) {
   const id = useId().replace(/:/g, "");
 
@@ -28,39 +32,49 @@ export function Seal({
       className={cn("h-24 w-24", className)}
     >
       <defs>
-        <path
-          id={`ring-${id}`}
-          d="M 50,50 m 0,-39 a 39,39 0 1,1 0,78 a 39,39 0 1,1 0,-78"
-          fill="none"
-        />
+        <path id={`top-${id}`} d="M 12,50 A 38,38 0 0 1 88,50" fill="none" />
+        <path id={`bot-${id}`} d="M 5,50 A 45,45 0 0 0 95,50" fill="none" />
       </defs>
 
-      <g opacity={ringOpacity}>
-        <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1.4" />
-        <circle
-          cx="50"
-          cy="50"
-          r="32"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="0.9"
-          opacity="0.5"
-        />
-        <text
-          fill="currentColor"
-          fontSize="7.2"
-          fontWeight="700"
-          letterSpacing="1.1"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          <textPath href={`#ring-${id}`} startOffset="0%">
-            {text}
-          </textPath>
-        </text>
-        {/* the two stars from the logo, at 9 and 3 o'clock */}
-        <Star x={7.5} y={50} />
-        <Star x={92.5} y={50} />
-      </g>
+      <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <circle
+        cx="50"
+        cy="50"
+        r="31"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="0.9"
+        opacity="0.5"
+      />
+
+      <text
+        fill="currentColor"
+        fontSize="7.2"
+        fontWeight="700"
+        letterSpacing="1.1"
+        textAnchor="middle"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        <textPath href={`#top-${id}`} startOffset="50%">
+          {topText}
+        </textPath>
+      </text>
+
+      <text
+        fill="currentColor"
+        fontSize="7.2"
+        fontWeight="700"
+        letterSpacing="1.1"
+        textAnchor="middle"
+        style={{ fontFamily: "var(--font-display)" }}
+      >
+        <textPath href={`#bot-${id}`} startOffset="50%">
+          {bottomText}
+        </textPath>
+      </text>
+
+      <Star x={9} y={50} />
+      <Star x={91} y={50} />
 
       {children}
     </svg>
@@ -70,7 +84,7 @@ export function Seal({
 function Star({ x, y }: { x: number; y: number }) {
   return (
     <path
-      transform={`translate(${x} ${y}) scale(0.11) translate(-25 -24)`}
+      transform={`translate(${x} ${y}) scale(0.1) translate(-25 -24)`}
       d="M25 0 L31 17 L49 17 L34.5 28 L40 46 L25 35 L10 46 L15.5 28 L1 17 L19 17 Z"
       fill="currentColor"
     />

@@ -291,22 +291,32 @@
 }
 
 [data-module="Admission"] { --chip: #c2551a; }
-[data-module="SIS"] { --chip: #2f6f8f; }
-[data-module="Fee"] { --chip: #1f7a55; }
-[data-module="Transport"] { --chip: #8a5a1f; }
-[data-module="HR"] { --chip: #7a3fa0; }
+[data-module="COE"] { --chip: #4c4ba8; }
+[data-module="Communication"] { --chip: #9b3b85; }
 [data-module="Examination"] { --chip: #a82f52; }
+[data-module="Fee"] { --chip: #1f7a55; }
+[data-module="Front Desk"] { --chip: #16726b; }
+[data-module="HR"] { --chip: #7a3fa0; }
+[data-module="Library"] { --chip: #a63a2b; }
 [data-module="Mobile App"] { --chip: #2a5fb8; }
+[data-module="SIS"] { --chip: #2f6f8f; }
+[data-module="Student Attendance"] { --chip: #6d7b1f; }
+[data-module="Transport"] { --chip: #8a5a1f; }
 [data-module="Website"] { --chip: #0e7c86; }
 [data-module="Other"] { --chip: #6b5a52; }
 
 .dark [data-module="Admission"] { --chip: #ff9a5e; }
-.dark [data-module="SIS"] { --chip: #79bfdd; }
-.dark [data-module="Fee"] { --chip: #63c79b; }
-.dark [data-module="Transport"] { --chip: #dda85c; }
-.dark [data-module="HR"] { --chip: #c89ae4; }
+.dark [data-module="COE"] { --chip: #a9a4f0; }
+.dark [data-module="Communication"] { --chip: #e79ad2; }
 .dark [data-module="Examination"] { --chip: #f08fa6; }
+.dark [data-module="Fee"] { --chip: #63c79b; }
+.dark [data-module="Front Desk"] { --chip: #5fc9b8; }
+.dark [data-module="HR"] { --chip: #c89ae4; }
+.dark [data-module="Library"] { --chip: #f0938a; }
 .dark [data-module="Mobile App"] { --chip: #8cb0f0; }
+.dark [data-module="SIS"] { --chip: #79bfdd; }
+.dark [data-module="Student Attendance"] { --chip: #c3d16a; }
+.dark [data-module="Transport"] { --chip: #dda85c; }
 .dark [data-module="Website"] { --chip: #5fc9d2; }
 .dark [data-module="Other"] { --chip: #c0aaa0; }
 

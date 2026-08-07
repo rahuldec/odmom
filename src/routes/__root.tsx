@@ -35,7 +35,7 @@ function StatusScreen({
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <div className="relative mx-auto mb-8 h-32 w-32">
-          <Seal className="h-32 w-32 text-primary/35" text={`${title.toUpperCase()} • `} />
+          <Seal className="h-32 w-32 text-primary/35" topText="MOM PORTAL" bottomText="OKIE DOKIE" />
           <span className="absolute inset-0 flex items-center justify-center font-display text-3xl font-bold text-primary">
             {code}
           </span>

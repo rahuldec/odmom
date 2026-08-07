@@ -53,6 +53,17 @@ the two stars. It appears **at most once per screen** — the document masthead,
 the empty state, the 404, and small in the document footer. Everything else
 stays quiet.
 
+The ring text sits on **two arcs**, not one: a single full-circle textPath puts
+the bottom half upside down, so the lower arc is reversed and both halves read
+left to right, the way the real logo is set. Props are `topText` and
+`bottomText`; pass empty strings for a plain ring (that's what the small footer
+seal does, since lettering is illegible at 36px).
+
+On the document masthead the seal is positioned **fully inside** the card with
+the text column padded clear of it, and hidden below the `sm` breakpoint. An
+earlier pass bled it off the right edge, which read as a clipping bug rather
+than a design choice.
+
 ## Module colours
 
 Every discussion point, completed task, and pending item is tagged with an ERP
@@ -61,8 +72,21 @@ module, and that tag is what people scan by. Each module now has a fixed colour
 by a data attribute rather than JS, so it's SSR-safe and adapts to dark mode
 without a hydration mismatch.
 
+The list is **alphabetical with "Other" pinned last** — it's a catch-all, not a
+name, so sorting it under O would bury it mid-list. Fourteen modules now:
+Admission, COE, Communication, Examination, Fee, Front Desk, HR, Library,
+Mobile App, SIS, Student Attendance, Transport, Website, Other.
+
+`src/lib/mom-types.ts` is included in this package for that reason — it's
+otherwise unchanged from your original.
+
 Adding a module means adding two lines to `styles.css` (light + dark) alongside
-the entry in `MODULES`.
+the entry in `MODULES`. All fourteen were rendered and checked for legibility in
+both themes; Fee and Front Desk sit closest in light mode, so if that pairing
+ever matters on screen, shift one of the two hex values.
+
+No migration needed — every previous module name is still in the list, so
+existing records keep their tags.
 
 ---
 
@@ -77,16 +101,15 @@ These matter more than the colour did.
 | **Draft autosaves** to `localStorage` with a restore prompt | Staff fill this on a phone after a campus visit. One dropped connection previously lost the whole write-up. Draft is kept if the save fails, cleared only on success. |
 | **Section rail** with completion dots | Replaces one endless scroll of cards. Required-but-empty sections show a red ring. |
 | **Sticky action bar** naming what's still missing | Each blocker is a link that scrolls to the section. |
-| **Inline field errors** | Validation was a single toast fired after the whole form was filled. |
+| **Inline field errors, and a toast that names them** | Validation was a single toast fired after the whole form was filled. The toast now says which fields are missing instead of "a few things". |
 | **Photos requirement surfaced upfront** | It was previously a surprise at submit time, after all the typing was done. |
 | **Drag-drop and screenshot paste** for photos | Most of these are screenshots. |
 | **Undo after "Tidy wording"** | The AI overwrote your text with no way back. Snapshot is kept per section. |
 | Attendee side as a segmented toggle | Two taps became one. |
 | Repeated "✨ Ready to polish?" banners removed | It appeared under every section. One quiet button per section instead. |
 
-The AI button is now labelled **Tidy wording** rather than "Auto-format with
-AI" — it says what happens, and the toast tells you to read the result before
-saving.
+The AI button is labelled **Auto correct with AI**, and the toast tells you to
+read the result before saving.
 
 ### List (`src/routes/index.tsx`)
 

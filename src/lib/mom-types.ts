@@ -48,14 +48,20 @@ export type MOM = {
 export type MOMInput = Omit<MOM, "id" | "created_at" | "updated_at">;
 
 
+// Alphabetical, with "Other" pinned last — it's the catch-all, not a name.
 export const MODULES = [
   "Admission",
-  "SIS",
-  "Fee",
-  "Transport",
-  "HR",
+  "COE",
+  "Communication",
   "Examination",
+  "Fee",
+  "Front Desk",
+  "HR",
+  "Library",
   "Mobile App",
+  "SIS",
+  "Student Attendance",
+  "Transport",
   "Website",
   "Other",
 ] as const;

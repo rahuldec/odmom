@@ -87,6 +87,13 @@ const SECTIONS = [
 type SectionId = (typeof SECTIONS)[number]["id"];
 type Errors = Partial<Record<"client_name" | "employee_name" | "meeting_date" | "photos", string>>;
 
+const FIELD_LABELS: Record<keyof Errors, string> = {
+  client_name: "client name",
+  employee_name: "attendee name",
+  meeting_date: "meeting date",
+  photos: "photos",
+};
+
 export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }: Props) {
   const [form, setForm] = useState<MOMInput>(initial ?? blank());
   const [errors, setErrors] = useState<Errors>({});
@@ -229,7 +236,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
       });
       dirty.current = true;
       setUndoable((u) => ({ ...u, [section]: before }));
-      toast.success("Wording cleaned up. Read it before you save.");
+      toast.success("Auto corrected. Read it before you save.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't reach the AI. Try again.");
     } finally {
@@ -259,10 +266,17 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
     if (form.photos.length === 0) next.photos = "Add at least one photo from the visit.";
 
     setErrors(next);
-    if (Object.keys(next).length > 0) {
-      const first: SectionId = next.photos && Object.keys(next).length === 1 ? "photos" : "meeting";
+    const missing = Object.keys(next) as (keyof Errors)[];
+    if (missing.length > 0) {
+      const first: SectionId = missing.length === 1 && next.photos ? "photos" : "meeting";
       goTo(first);
-      toast.error("A few things still need filling in.");
+      // Name what's actually missing — "a few things" tells the person less
+      // than the bar above the button already does.
+      toast.error(
+        missing.length === 1
+          ? next[missing[0]]
+          : `Still needed: ${missing.map((k) => FIELD_LABELS[k]).join(", ")}.`,
+      );
       return;
     }
 
@@ -507,7 +521,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
           id="discussion"
           index={3}
           title="Discussion points"
-          description="What was raised. Type it rough — formatting comes after."
+          description="What was raised. Type it rough — auto correct cleans it up after."
           icon={MessagesSquare}
           count={form.discussion_points.length}
           onAdd={() =>
@@ -845,7 +859,7 @@ function Section({
               disabled={ai.loading || ai.disabled}
               title={
                 ai.disabled
-                  ? "Add a point first, then tidy the wording"
+                  ? "Add a point first, then auto correct it"
                   : "Rewrites your rough notes into clear MOM language. Your points stay — only the wording changes."
               }
               className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
@@ -855,7 +869,7 @@ function Section({
               ) : (
                 <Sparkles className="h-3.5 w-3.5" />
               )}
-              {ai.loading ? "Tidying…" : "Tidy wording"}
+              {ai.loading ? "Correcting…" : "Auto correct with AI"}
             </Button>
           )}
           {onAdd && (

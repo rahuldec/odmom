@@ -134,11 +134,9 @@ function DetailPage() {
       <article className="print-document space-y-5">
         {/* Document masthead — the one place the seal appears at full size. */}
         <Card data-doc-card className="relative overflow-hidden border-0 bg-seal text-seal-foreground">
-          <Seal
-            className="pointer-events-none absolute -right-8 -top-6 h-48 w-48 rotate-[8deg] text-seal-foreground/15"
-            text="MINUTES OF MEETING • OKIE DOKIE • "
-          />
-          <div className="relative px-6 py-7 sm:px-8 sm:py-9">
+          {/* Sits fully inside the card — a clipped seal reads as a mistake. */}
+          <Seal className="pointer-events-none absolute right-7 top-1/2 hidden h-36 w-36 -translate-y-1/2 rotate-[8deg] text-seal-foreground/20 sm:block lg:h-44 lg:w-44" />
+          <div className="relative px-6 py-7 sm:px-8 sm:py-9 sm:pr-52 lg:pr-60">
             <p className="eyebrow text-seal-foreground/70">Minutes of meeting</p>
             <h1 className="mt-2 max-w-[24ch] font-display text-3xl font-bold leading-tight sm:text-4xl">
               {mom.client_name}
@@ -237,7 +235,7 @@ function DetailPage() {
         )}
 
         <div className="flex items-center justify-center gap-3 pt-2">
-          <Seal className="h-9 w-9 text-muted-foreground/50" text="OKIE DOKIE • " ringOpacity={1} />
+          <Seal className="h-9 w-9 text-muted-foreground/50" topText="" bottomText="" />
           <p className="eyebrow">Recorded by Okie Dokie · MOM Portal</p>
         </div>
       </article>
