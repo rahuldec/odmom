@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, CalendarDays, Clock3, FileText, Users } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -20,8 +20,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMoms } from "@/lib/mom.functions";
 import type { MOM } from "@/lib/mom-types";
-import { formatDay, initials, monthKey, plural, relativeDay } from "@/lib/format";
-import { visitsByEmployee } from "@/lib/people";
+import { monthKey, plural, relativeDay } from "@/lib/format";
+import { visitsByEmployee, type EmployeeVisits } from "@/lib/people";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/dashboard")({
       { title: "Dashboard — MOM Portal" },
       {
         name: "description",
-        content: "Meetings recorded, clients covered, and what's still pending.",
+        content: "Meetings recorded, visits per team member, and what's still pending.",
       },
       { property: "og:title", content: "Dashboard — MOM Portal" },
       { property: "og:type", content: "website" },
@@ -57,13 +57,14 @@ function DashboardPage() {
     () => visitsByEmployee(withinPeriod(data ?? [], period)),
     [data, period],
   );
+  const creditedVisits = useMemo(() => team.reduce((n, t) => n + t.visits, 0), [team]);
 
   return (
     <AppShell>
       <PageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="What's been recorded, and what's still waiting on someone."
+        description="What's been recorded, who's been out there, and what's still waiting on someone."
         actions={
           <Link to="/">
             <Button variant="outline" className="gap-1.5">
@@ -112,43 +113,97 @@ function DashboardPage() {
             />
           </div>
 
-          <div className="mt-6 grid gap-5 lg:grid-cols-[1.4fr_1fr]">
-            {/* Follow-up queue — the reason to open this page. */}
+          <div className="mt-6 grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+            {/* Visits per team member — a joint visit counts for everyone on it. */}
             <Card className="overflow-hidden">
-              <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
-                <h2 className="font-display text-base font-semibold">Waiting on Okie Dokie</h2>
-                <span className="eyebrow">{plural(stats.followUps.length, "meeting")}</span>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+                <div>
+                  <h2 className="font-display text-base font-semibold">Visits by team member</h2>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    A visit made together counts for everyone who was on it.
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1">
+                  {PERIODS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPeriod(p.value)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+                        period === p.value
+                          ? "bg-card text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {stats.followUps.length === 0 ? (
-                <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Nothing outstanding on our side. Every pending item is with a client.
+
+              {team.length === 0 ? (
+                <p className="px-5 py-16 text-center text-sm text-muted-foreground">
+                  No visits recorded in this period.
                 </p>
               ) : (
-                <ul className="divide-y divide-border">
-                  {stats.followUps.slice(0, 6).map((f) => (
-                    <li key={f.mom.id}>
-                      <Link
-                        to="/mom/$id"
-                        params={{ id: f.mom.id }}
-                        className="flex items-start gap-4 px-5 py-4 transition-colors hover:bg-secondary/60"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{f.mom.client_name}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            <span className="tabular">{formatDay(f.mom.meeting_date)}</span> ·{" "}
-                            {relativeDay(f.mom.meeting_date)} · {f.mom.employee_name}
-                          </p>
-                          <p className="mt-2 line-clamp-1 text-sm text-muted-foreground">
-                            {f.first}
-                          </p>
-                        </div>
-                        <span className="shrink-0 rounded-full border border-gold/60 bg-gold/20 px-2.5 py-0.5 text-xs font-medium text-gold-foreground dark:text-gold">
-                          {f.count}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  <div className="flex items-center gap-4 px-5 pt-4 text-xs text-muted-foreground">
+                    <LegendKey color="var(--color-primary)" label="On site" />
+                    <LegendKey color="var(--color-chart-2)" label="Online" />
+                  </div>
+                  <div
+                    className="px-2 pb-4 pt-2"
+                    style={{ height: Math.max(220, team.length * 42 + 40) }}
+                  >
+                    {mounted && (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={team}
+                          layout="vertical"
+                          barSize={18}
+                          margin={{ top: 4, right: 28, bottom: 0, left: 4 }}
+                        >
+                          <CartesianGrid horizontal={false} stroke="var(--color-border)" />
+                          <XAxis
+                            type="number"
+                            allowDecimals={false}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
+                          />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            width={132}
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fontSize: 12, fill: "var(--color-foreground)" }}
+                          />
+                          <Tooltip
+                            cursor={{ fill: "var(--color-muted)" }}
+                            content={<VisitTooltip />}
+                          />
+                          <Bar dataKey="onsite" name="On site" stackId="v">
+                            {team.map((t) => (
+                              <Cell key={t.key} fill="var(--color-primary)" />
+                            ))}
+                          </Bar>
+                          <Bar dataKey="online" name="Online" stackId="v" radius={[0, 4, 4, 0]}>
+                            {team.map((t) => (
+                              <Cell key={t.key} fill="var(--color-chart-2)" />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                  <div className="border-t border-border bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">
+                    {plural(creditedVisits, "credited visit")} across{" "}
+                    {plural(team.length, "team member")} — counted from the recorder plus every
+                    attendee tagged as Okie Dokie team.
+                  </div>
+                </>
               )}
             </Card>
 
@@ -163,7 +218,7 @@ function DashboardPage() {
                 </p>
               ) : (
                 <ul className="space-y-3 p-5">
-                  {stats.byModule.slice(0, 6).map((m) => (
+                  {stats.byModule.slice(0, 8).map((m) => (
                     <li key={m.module}>
                       <div className="mb-1.5 flex items-center justify-between">
                         <ModuleChip module={m.module} />
@@ -185,90 +240,6 @@ function DashboardPage() {
               )}
             </Card>
           </div>
-
-          {/* Visits by team member — a joint visit counts for everyone on it. */}
-          <Card className="mt-5 overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5">
-              <div>
-                <h2 className="font-display text-base font-semibold">Visits by team member</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  A visit made together counts for everyone who was on it.
-                </p>
-              </div>
-              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/60 p-1">
-                {PERIODS.map((p) => (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setPeriod(p.value)}
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                      period === p.value
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {team.length === 0 ? (
-              <p className="px-5 py-10 text-center text-sm text-muted-foreground">
-                No visits recorded in this period.
-              </p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {team.map((t, i) => (
-                  <li key={t.key} className="flex items-center gap-4 px-5 py-3.5">
-                    <span className="tabular w-5 shrink-0 text-xs text-muted-foreground">
-                      {i + 1}
-                    </span>
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-                      {initials(t.name)}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <p className="truncate font-medium">{t.name}</p>
-                        <span className="tabular shrink-0 font-display text-lg font-semibold leading-none">
-                          {t.visits}
-                        </span>
-                      </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{
-                            width: `${Math.round((t.visits / team[0].visits) * 100)}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        <span className="tabular">{t.onsite}</span> on site ·{" "}
-                        <span className="tabular">{t.online}</span> online ·{" "}
-                        <span className="tabular">{t.clients}</span>{" "}
-                        {t.clients === 1 ? "client" : "clients"}
-                        {t.joint > 0 && (
-                          <>
-                            {" "}
-                            · <span className="tabular">{t.joint}</span> joint
-                          </>
-                        )}
-                        {t.lastVisit && <> · last {relativeDay(t.lastVisit)}</>}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <div className="border-t border-border bg-muted/40 px-5 py-2.5 text-xs text-muted-foreground">
-              {plural(team.reduce((n, t) => n + t.visits, 0), "credited visit")} across{" "}
-              {plural(team.length, "team member")} — read from the recorder plus every attendee
-              tagged as Okie Dokie team.
-            </div>
-          </Card>
 
           {/* Meetings over time */}
           <Card className="mt-5 overflow-hidden">
@@ -321,6 +292,53 @@ function DashboardPage() {
   );
 }
 
+function LegendKey({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
+
+/** The bar only carries the on-site/online split; the rest of a person's
+ *  numbers live here so the chart itself stays readable. */
+function VisitTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: EmployeeVisits }[];
+}) {
+  if (!active || !payload?.length) return null;
+  const t = payload[0].payload;
+  return (
+    <div className="rounded-xl border border-border bg-card px-3 py-2 text-xs shadow-md">
+      <p className="font-display text-sm font-semibold">{t.name}</p>
+      <p className="mt-1">
+        <span className="tabular font-medium">{t.visits}</span>{" "}
+        {t.visits === 1 ? "visit" : "visits"}
+      </p>
+      <p className="mt-0.5 text-muted-foreground">
+        <span className="tabular">{t.onsite}</span> on site ·{" "}
+        <span className="tabular">{t.online}</span> online
+      </p>
+      <p className="mt-0.5 text-muted-foreground">
+        <span className="tabular">{t.clients}</span> {t.clients === 1 ? "client" : "clients"}
+        {t.joint > 0 && (
+          <>
+            {" "}
+            · <span className="tabular">{t.joint}</span> joint
+          </>
+        )}
+      </p>
+      {t.lastVisit && (
+        <p className="mt-0.5 text-muted-foreground">Last {relativeDay(t.lastVisit)}</p>
+      )}
+    </div>
+  );
+}
+
 function Stat({
   icon: Icon,
   label,
@@ -357,7 +375,6 @@ function summarise(moms: MOM[]) {
   const moduleCounts = new Map<string, number>();
   const monthCounts = new Map<string, number>();
   const clients = new Set<string>();
-  const followUps: { mom: MOM; count: number; first: string }[] = [];
 
   for (const m of moms) {
     clients.add(m.client_name.trim().toLowerCase());
@@ -371,10 +388,6 @@ function summarise(moms: MOM[]) {
 
     for (const p of pending) {
       moduleCounts.set(p.module, (moduleCounts.get(p.module) ?? 0) + 1);
-    }
-
-    if (ours.length > 0) {
-      followUps.push({ mom: m, count: ours.length, first: ours[0].requirement });
     }
   }
 
@@ -401,7 +414,6 @@ function summarise(moms: MOM[]) {
       .map(([module, count]) => ({ module, count }))
       .sort((a, b) => b.count - a.count),
     byMonth,
-    followUps: followUps.sort((a, b) => b.mom.meeting_date.localeCompare(a.mom.meeting_date)),
   };
 }
 
