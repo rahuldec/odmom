@@ -135,11 +135,13 @@ function DetailPage() {
       <article className="print-document space-y-5">
         {/* Document masthead — the one place the seal appears at full size. */}
         <Card data-doc-card className="relative overflow-hidden border-0 bg-seal text-seal-foreground">
-          {/* Seal stamp: cream disc + maroon seal so it reads clearly on the maroon card. */}
+          {/* Real Okie Dokie seal logo on a light disc so it pops on the maroon header. */}
           <div className="pointer-events-none absolute right-6 top-1/2 hidden -translate-y-1/2 sm:block lg:right-8">
-            <div className="flex items-center justify-center rounded-full bg-seal-foreground p-3 shadow-xl ring-1 ring-seal-foreground/30 lg:p-4">
-              <Seal className="h-32 w-32 rotate-[8deg] text-seal lg:h-40 lg:w-40" />
-            </div>
+            <img
+              src={logoUrl}
+              alt=""
+              className="h-32 w-32 rounded-full bg-seal-foreground object-contain p-1 shadow-xl ring-1 ring-seal-foreground/30 lg:h-40 lg:w-40"
+            />
           </div>
           <div className="relative px-6 py-7 sm:px-8 sm:py-9 sm:pr-48 lg:pr-64">
             <p className="eyebrow text-seal-foreground/70">Minutes of meeting</p>
