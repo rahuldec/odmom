@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MomNewRouteImport } from './routes/mom.new'
 import { Route as MomIdRouteImport } from './routes/mom.$id'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
+import { Route as ApiPublicMomsRouteImport } from './routes/api/public/moms'
 
 const MeetingsRoute = MeetingsRouteImport.update({
   id: '/meetings',
@@ -40,6 +41,11 @@ const EditIdRoute = EditIdRouteImport.update({
   path: '/edit/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicMomsRoute = ApiPublicMomsRouteImport.update({
+  id: '/api/public/moms',
+  path: '/api/public/moms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
+  '/api/public/moms': typeof ApiPublicMomsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
+  '/api/public/moms': typeof ApiPublicMomsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
+  '/api/public/moms': typeof ApiPublicMomsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
+  fullPaths:
+    | '/'
+    | '/meetings'
+    | '/edit/$id'
+    | '/mom/$id'
+    | '/mom/new'
+    | '/api/public/moms'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
-  id: '__root__' | '/' | '/meetings' | '/edit/$id' | '/mom/$id' | '/mom/new'
+  to:
+    | '/'
+    | '/meetings'
+    | '/edit/$id'
+    | '/mom/$id'
+    | '/mom/new'
+    | '/api/public/moms'
+  id:
+    | '__root__'
+    | '/'
+    | '/meetings'
+    | '/edit/$id'
+    | '/mom/$id'
+    | '/mom/new'
+    | '/api/public/moms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   EditIdRoute: typeof EditIdRoute
   MomIdRoute: typeof MomIdRoute
   MomNewRoute: typeof MomNewRoute
+  ApiPublicMomsRoute: typeof ApiPublicMomsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EditIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/moms': {
+      id: '/api/public/moms'
+      path: '/api/public/moms'
+      fullPath: '/api/public/moms'
+      preLoaderRoute: typeof ApiPublicMomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   EditIdRoute: EditIdRoute,
   MomIdRoute: MomIdRoute,
   MomNewRoute: MomNewRoute,
+  ApiPublicMomsRoute: ApiPublicMomsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
