@@ -10,12 +10,14 @@ import {
   AlarmClockCheck,
   Check,
   ClipboardCheck,
+  GripVertical,
   ImagePlus,
   Loader2,
   MessagesSquare,
   Paperclip,
   PenLine,
   Plus,
+  RotateCw,
   Sparkles,
   Trash2,
   Undo2,
@@ -103,10 +105,20 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const genFn = useServerFn(generateMomFromNotes);
   const dirty = useRef(false);
+  const [dragAttendee, setDragAttendee] = useState<number | null>(null);
+  const [overAttendee, setOverAttendee] = useState<number | null>(null);
 
   const update = <K extends keyof MOMInput>(k: K, v: MOMInput[K]) => {
     dirty.current = true;
     setForm((f) => ({ ...f, [k]: v }));
+  };
+
+  const moveAttendee = (from: number, to: number) => {
+    if (from === to) return;
+    const copy = form.attendees.slice();
+    const [moved] = copy.splice(from, 1);
+    copy.splice(to, 0, moved);
+    update("attendees", copy);
   };
 
   /* ---------------------------------------------------------------- drafts */
@@ -460,59 +472,98 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
           emptyLabel="No attendees added yet."
         >
           {form.attendees.map((a, i) => (
-            <Row
+            <div
               key={i}
-              onRemove={() =>
-                update(
-                  "attendees",
-                  form.attendees.filter((_, idx) => idx !== i),
-                )
-              }
-              removeLabel={`Remove attendee ${i + 1}`}
+              onDragOver={(e) => {
+                if (dragAttendee === null) return;
+                e.preventDefault();
+                if (overAttendee !== i) setOverAttendee(i);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragAttendee !== null) moveAttendee(dragAttendee, i);
+                setDragAttendee(null);
+                setOverAttendee(null);
+              }}
+              className={cn(
+                "rounded-lg border-t-2 border-t-transparent",
+                dragAttendee === i && "opacity-50",
+                overAttendee === i &&
+                  dragAttendee !== null &&
+                  dragAttendee !== i &&
+                  "border-t-primary",
+              )}
             >
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_170px]">
-                <Input
-                  placeholder="Name"
-                  value={a.name}
-                  onChange={(e) => {
-                    const copy = form.attendees.slice();
-                    copy[i] = { ...a, name: e.target.value };
-                    update("attendees", copy);
-                  }}
-                />
-                <Input
-                  placeholder="Designation"
-                  value={a.designation}
-                  onChange={(e) => {
-                    const copy = form.attendees.slice();
-                    copy[i] = { ...a, designation: e.target.value };
-                    update("attendees", copy);
-                  }}
-                />
-                <Input
-                  placeholder="Mobile (optional)"
-                  inputMode="tel"
-                  value={a.mobile ?? ""}
-                  onChange={(e) => {
-                    const copy = form.attendees.slice();
-                    copy[i] = { ...a, mobile: e.target.value };
-                    update("attendees", copy);
-                  }}
-                />
-                <Segmented
-                  value={a.team}
-                  onChange={(v) => {
-                    const copy = form.attendees.slice();
-                    copy[i] = { ...a, team: v };
-                    update("attendees", copy);
-                  }}
-                  options={[
-                    { value: "client" as AttendeeTeam, label: "Client" },
-                    { value: "okie_dokie" as AttendeeTeam, label: "Okie Dokie" },
-                  ]}
-                />
-              </div>
-            </Row>
+              <Row
+                onRemove={() =>
+                  update(
+                    "attendees",
+                    form.attendees.filter((_, idx) => idx !== i),
+                  )
+                }
+                removeLabel={`Remove attendee ${i + 1}`}
+              >
+                <div className="flex items-start gap-2">
+                  <span
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      setDragAttendee(i);
+                    }}
+                    onDragEnd={() => {
+                      setDragAttendee(null);
+                      setOverAttendee(null);
+                    }}
+                    className="mt-2 shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-muted-foreground active:cursor-grabbing"
+                    aria-label={`Drag to reorder attendee ${i + 1}`}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px_170px]">
+                    <Input
+                      placeholder="Name"
+                      value={a.name}
+                      onChange={(e) => {
+                        const copy = form.attendees.slice();
+                        copy[i] = { ...a, name: e.target.value };
+                        update("attendees", copy);
+                      }}
+                    />
+                    <Input
+                      placeholder="Designation"
+                      value={a.designation}
+                      onChange={(e) => {
+                        const copy = form.attendees.slice();
+                        copy[i] = { ...a, designation: e.target.value };
+                        update("attendees", copy);
+                      }}
+                    />
+                    <Input
+                      placeholder="Mobile (optional)"
+                      inputMode="tel"
+                      value={a.mobile ?? ""}
+                      onChange={(e) => {
+                        const copy = form.attendees.slice();
+                        copy[i] = { ...a, mobile: e.target.value };
+                        update("attendees", copy);
+                      }}
+                    />
+                    <Segmented
+                      value={a.team}
+                      onChange={(v) => {
+                        const copy = form.attendees.slice();
+                        copy[i] = { ...a, team: v };
+                        update("attendees", copy);
+                      }}
+                      options={[
+                        { value: "client" as AttendeeTeam, label: "Client" },
+                        { value: "okie_dokie" as AttendeeTeam, label: "Okie Dokie" },
+                      ]}
+                    />
+                  </div>
+                </div>
+              </Row>
+            </div>
           ))}
         </Section>
 
@@ -1030,6 +1081,7 @@ function PhotosSection({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [rotating, setRotating] = useState<number | null>(null);
   const latest = useRef(photos);
   latest.current = photos;
 
@@ -1088,6 +1140,66 @@ function PhotosSection({
       /* the record matters more than an orphaned file */
     }
     onChange(photos.filter((_, idx) => idx !== i));
+  };
+
+  const rotatePhoto = async (i: number) => {
+    const p = photos[i];
+    setRotating(i);
+    try {
+      const res = await fetch(p.url);
+      if (!res.ok) throw new Error("Couldn't load the photo.");
+      const sourceBlob = await res.blob();
+      const objectUrl = URL.createObjectURL(sourceBlob);
+      let img: HTMLImageElement;
+      try {
+        img = await new Promise<HTMLImageElement>((resolve, reject) => {
+          const el = new Image();
+          el.onload = () => resolve(el);
+          el.onerror = () => reject(new Error("Couldn't decode the photo."));
+          el.src = objectUrl;
+        });
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      // Rotate the actual pixels (not just a CSS transform) so the stored
+      // file — and the PDF export, which draws these raw — stay in sync.
+      const canvas = document.createElement("canvas");
+      canvas.width = img.naturalHeight;
+      canvas.height = img.naturalWidth;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas unavailable.");
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+
+      const rotatedBlob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.92),
+      );
+      if (!rotatedBlob) throw new Error("Couldn't rotate the photo.");
+
+      const { error: upErr } = await supabase.storage
+        .from("mom-photos")
+        .upload(p.path, rotatedBlob, { cacheControl: "3600", upsert: true });
+      if (upErr) throw new Error(upErr.message);
+
+      const { data: signed, error: sErr } = await supabase.storage
+        .from("mom-photos")
+        .createSignedUrl(p.path, 60 * 60 * 24 * 365 * 5);
+      if (sErr || !signed) throw new Error("Couldn't refresh the link.");
+
+      const bust = signed.signedUrl.includes("?") ? "&" : "?";
+      const idx = latest.current.findIndex((x) => x.path === p.path);
+      if (idx !== -1) {
+        const copy = latest.current.slice();
+        copy[idx] = { ...copy[idx], url: `${signed.signedUrl}${bust}t=${Date.now()}` };
+        onChange(copy);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't rotate the photo.");
+    } finally {
+      setRotating(null);
+    }
   };
 
   return (
@@ -1170,14 +1282,30 @@ function PhotosSection({
                     alt={p.caption || `Photo ${i + 1}`}
                     className="aspect-square w-full object-cover"
                   />
-                  <button
-                    type="button"
-                    onClick={() => void remove(i)}
-                    className="absolute right-1.5 top-1.5 rounded-full bg-foreground/70 p-1 text-background opacity-0 transition-opacity hover:bg-foreground focus-visible:opacity-100 group-hover:opacity-100"
-                    aria-label={`Remove photo ${i + 1}`}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="absolute right-1.5 top-1.5 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void rotatePhoto(i)}
+                      disabled={rotating === i}
+                      className="rounded-full bg-foreground/70 p-1 text-background opacity-0 transition-opacity hover:bg-foreground focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-100"
+                      aria-label={`Rotate photo ${i + 1}`}
+                    >
+                      {rotating === i ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <RotateCw className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(i)}
+                      disabled={rotating === i}
+                      className="rounded-full bg-foreground/70 p-1 text-background opacity-0 transition-opacity hover:bg-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                      aria-label={`Remove photo ${i + 1}`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <Input
                     placeholder="Caption (optional)"
                     value={p.caption ?? ""}
