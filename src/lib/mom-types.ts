@@ -28,12 +28,6 @@ export const PENDING_WITH: { value: PendingWith; label: string }[] = [
 
 export type MomPhoto = { path: string; url: string; caption?: string };
 
-export type MomSignature = { path: string; url: string };
-export type MomSignatures = {
-  employee: MomSignature | null;
-  client: MomSignature | null;
-};
-
 export type MOM = {
   id: string;
   client_name: string;
@@ -47,7 +41,6 @@ export type MOM = {
   work_completed: WorkCompletedItem[];
   pending_points: PendingPoint[];
   photos: MomPhoto[];
-  signatures: MomSignatures;
   created_at: string;
   updated_at: string;
 };

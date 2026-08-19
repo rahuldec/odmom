@@ -115,10 +115,6 @@ export async function downloadMomPdf(mom: MOM) {
 
   const logo = await loadLogo();
   const loadedPhotos = await Promise.all(mom.photos.map((p) => loadImage(p.url)));
-  const [loadedEmployeeSig, loadedClientSig] = await Promise.all([
-    mom.signatures?.employee ? loadImage(mom.signatures.employee.url) : Promise.resolve(null),
-    mom.signatures?.client ? loadImage(mom.signatures.client.url) : Promise.resolve(null),
-  ]);
 
   // ── HEADER (drawn on every page) ─────────────────────────────────────
   const headerH = 96;
@@ -468,22 +464,10 @@ export async function downloadMomPdf(mom: MOM) {
   y += 14;
   const sigW = (contentW - 30) / 2;
   const sigY = y;
-  const sigLineY = sigY + 46;
-
-  const placeSignature = (loaded: LoadedImage | null, boxX: number) => {
-    if (!loaded) return;
-    const { w, h } = fitInBox(loaded.width, loaded.height, sigW - 12, 36);
-    const ix = boxX + (sigW - w) / 2;
-    const iy = sigLineY - h - 4;
-    doc.addImage(loaded.dataUrl, imageFormat(loaded.dataUrl), ix, iy, w, h);
-  };
-  placeSignature(loadedEmployeeSig, margin);
-  placeSignature(loadedClientSig, margin + sigW + 30);
-
   doc.setDrawColor(...LINE);
   doc.setLineWidth(0.75);
-  doc.line(margin, sigLineY, margin + sigW, sigLineY);
-  doc.line(margin + sigW + 30, sigLineY, margin + sigW + 30 + sigW, sigLineY);
+  doc.line(margin, sigY + 46, margin + sigW, sigY + 46);
+  doc.line(margin + sigW + 30, sigY + 46, margin + sigW + 30 + sigW, sigY + 46);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);

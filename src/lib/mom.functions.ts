@@ -3,7 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { MOM, MOMInput } from "./mom-types";
-import { attendeeDirectory, type AttendeeRecord } from "./people";
 
 function getSupa() {
   return createClient<Database>(
@@ -47,12 +46,6 @@ const photoSchema = z.object({
   url: z.string().min(1),
   caption: z.string().optional(),
 });
-const signatureImageSchema = z
-  .object({ path: z.string().min(1), url: z.string().min(1) })
-  .nullable();
-const signaturesSchema = z
-  .object({ employee: signatureImageSchema, client: signatureImageSchema })
-  .default({ employee: null, client: null });
 
 const momInputSchema = z.object({
   client_name: z.string().min(1).max(200),
@@ -66,7 +59,6 @@ const momInputSchema = z.object({
   work_completed: z.array(wcSchema).default([]),
   pending_points: z.array(ppSchema).default([]),
   photos: z.array(photoSchema).default([]),
-  signatures: signaturesSchema,
 });
 
 
@@ -129,19 +121,6 @@ export const getMom = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     return (row as unknown as MOM) ?? null;
-  });
-
-export const getAttendeeDirectory = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => z.object({}).parse(input ?? {}))
-  .handler(async (): Promise<AttendeeRecord[]> => {
-    const supa = getSupa();
-    const { data: rows, error } = await supa
-      .from("moms")
-      .select("attendees, employee_name")
-      .order("meeting_date", { ascending: false })
-      .limit(300);
-    if (error) throw new Error(error.message);
-    return attendeeDirectory((rows ?? []) as unknown as Pick<MOM, "attendees" | "employee_name">[]);
   });
 
 export const createMom = createServerFn({ method: "POST" })

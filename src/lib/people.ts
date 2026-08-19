@@ -1,4 +1,4 @@
-import type { AttendeeTeam, MOM } from "./mom-types";
+import type { MOM } from "./mom-types";
 
 /**
  * Who from Okie Dokie was on a visit, and how many visits each person has.
@@ -54,47 +54,6 @@ export function momTeamMembers(mom: MOM): string[] {
   add(mom.employee_name);
   for (const a of mom.attendees ?? []) {
     if (a.team === "okie_dokie") add(a.name);
-  }
-  return [...seen.values()];
-}
-
-export type AttendeeRecord = {
-  key: string;
-  name: string;
-  designation: string;
-  mobile?: string;
-  team: AttendeeTeam;
-};
-
-/**
- * Every person who has ever shown up on a MOM — an attendee row, or the
- * Okie Dokie person who filed it — deduplicated by name, for autocomplete.
- * Pass moms most-recent-first so the freshest designation/mobile on file
- * wins when the same person appears more than once.
- */
-export function attendeeDirectory(
-  moms: Pick<MOM, "attendees" | "employee_name">[],
-): AttendeeRecord[] {
-  const seen = new Map<string, AttendeeRecord>();
-  const add = (
-    name: string,
-    designation: string,
-    mobile: string | undefined,
-    team: AttendeeTeam,
-  ) => {
-    const clean = tidy(name);
-    const key = nameKey(clean);
-    if (!key || seen.has(key)) return;
-    seen.set(key, { key, name: clean, designation, mobile: mobile || undefined, team });
-  };
-
-  for (const mom of moms) {
-    for (const a of mom.attendees ?? []) {
-      add(a.name, (a.designation ?? "").trim(), a.mobile?.trim(), a.team);
-    }
-    for (const name of splitNames(mom.employee_name)) {
-      add(name, "", undefined, "okie_dokie");
-    }
   }
   return [...seen.values()];
 }
