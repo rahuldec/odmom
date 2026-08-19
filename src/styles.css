@@ -290,6 +290,19 @@
   background: var(--chip);
 }
 
+/* Used where the module needs to read at a glance, e.g. the module picker
+   dropdown — bigger and bolder than the inline chips used everywhere else. */
+.module-chip.module-chip--lg {
+  padding: 0.3125rem 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.module-chip.module-chip--lg::before {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
 [data-module="Admission"] { --chip: #c2551a; }
 [data-module="COE"] { --chip: #4c4ba8; }
 [data-module="Communication"] { --chip: #9b3b85; }

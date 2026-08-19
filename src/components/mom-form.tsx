@@ -1025,7 +1025,7 @@ function Segmented<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="inline-flex h-9 w-full rounded-md border border-input bg-background p-0.5">
+    <div className="inline-flex h-9 w-full items-stretch overflow-hidden rounded-md border border-input bg-background p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -1033,7 +1033,7 @@ function Segmented<T extends string>({
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
           className={cn(
-            "flex-1 rounded-[0.3rem] px-2 text-sm font-medium transition-colors",
+            "min-w-0 flex-1 truncate rounded-[0.3rem] px-1.5 text-xs font-medium transition-colors sm:px-2 sm:text-sm",
             value === o.value
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground",
@@ -1055,7 +1055,7 @@ function ModuleSelect({ value, onChange }: { value: string; onChange: (v: string
       <SelectContent>
         {MODULES.map((m) => (
           <SelectItem key={m} value={m}>
-            <ModuleChip module={m} />
+            <ModuleChip module={m} className="module-chip--lg" />
           </SelectItem>
         ))}
       </SelectContent>
