@@ -82,6 +82,7 @@ function EditPage() {
             work_completed: mom.work_completed,
             pending_points: mom.pending_points,
             photos: mom.photos ?? [],
+            signatures: mom.signatures ?? { employee: null, client: null },
           }}
           onSubmit={async (input: MOMInput) => {
             setBusy(true);

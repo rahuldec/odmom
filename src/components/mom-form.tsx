@@ -10,6 +10,7 @@ import {
   AlarmClockCheck,
   Check,
   ClipboardCheck,
+  Eraser,
   GripVertical,
   ImagePlus,
   Loader2,
@@ -18,6 +19,7 @@ import {
   PenLine,
   Plus,
   RotateCw,
+  Signature as SignatureIcon,
   Sparkles,
   Trash2,
   Undo2,
@@ -40,8 +42,9 @@ import { ModuleChip } from "@/components/chips";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { generateMomFromNotes } from "@/lib/mom.functions";
+import { generateMomFromNotes, getAttendeeDirectory } from "@/lib/mom.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { nameKey, type AttendeeRecord } from "@/lib/people";
 import {
   MODULES,
   PENDING_WITH,
@@ -49,6 +52,8 @@ import {
   type AttendeeTeam,
   type PendingWith,
   type MomPhoto,
+  type MomSignature,
+  type MomSignatures,
   type PendingAttachment,
 } from "@/lib/mom-types";
 
@@ -73,6 +78,7 @@ const blank = (): MOMInput => ({
   work_completed: [],
   pending_points: [],
   photos: [],
+  signatures: { employee: null, client: null },
 });
 
 type AiSection = "discussion_points" | "work_completed" | "pending_points";
@@ -84,6 +90,7 @@ const SECTIONS = [
   { id: "work", label: "Work done", icon: ClipboardCheck, required: false },
   { id: "pending", label: "Pending", icon: AlarmClockCheck, required: false },
   { id: "photos", label: "Photos", icon: ImagePlus, required: true },
+  { id: "signoff", label: "Sign-off", icon: SignatureIcon, required: false },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -107,6 +114,18 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
   const dirty = useRef(false);
   const [dragAttendee, setDragAttendee] = useState<number | null>(null);
   const [overAttendee, setOverAttendee] = useState<number | null>(null);
+  const [directory, setDirectory] = useState<AttendeeRecord[]>([]);
+  const dirFn = useServerFn(getAttendeeDirectory);
+
+  useEffect(() => {
+    dirFn({ data: {} })
+      .then(setDirectory)
+      .catch(() => {
+        /* autocomplete is a nicety — a fetch failure shouldn't block the form */
+      });
+  }, [dirFn]);
+
+  const directoryByKey = useMemo(() => new Map(directory.map((d) => [d.key, d])), [directory]);
 
   const update = <K extends keyof MOMInput>(k: K, v: MOMInput[K]) => {
     dirty.current = true;
@@ -172,6 +191,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
       work: form.work_completed.length ? "done" : "empty",
       pending: form.pending_points.length ? "done" : "empty",
       photos: form.photos.length ? "done" : "todo",
+      signoff: form.signatures.employee || form.signatures.client ? "done" : "empty",
     } as Record<SectionId, "done" | "todo" | "empty">;
   }, [form]);
 
@@ -182,6 +202,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
     work: form.work_completed.length,
     pending: form.pending_points.length,
     photos: form.photos.length,
+    signoff: null,
   };
 
   const blockers = SECTIONS.filter((s) => s.required && status[s.id] === "todo");
@@ -455,6 +476,11 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
         </Section>
 
         {/* 2 — Attendees */}
+        <datalist id="attendee-directory">
+          {directory.map((d) => (
+            <option key={d.key} value={d.name} />
+          ))}
+        </datalist>
         <Section
           id="attendees"
           index={2}
@@ -523,9 +549,18 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                     <Input
                       placeholder="Name"
                       value={a.name}
+                      list="attendee-directory"
+                      autoComplete="off"
                       onChange={(e) => {
+                        const typed = e.target.value;
+                        const known = directoryByKey.get(nameKey(typed));
                         const copy = form.attendees.slice();
-                        copy[i] = { ...a, name: e.target.value };
+                        copy[i] = {
+                          ...a,
+                          name: typed,
+                          designation: !a.designation && known ? known.designation : a.designation,
+                          mobile: !a.mobile && known?.mobile ? known.mobile : a.mobile,
+                        };
                         update("attendees", copy);
                       }}
                     />
@@ -783,6 +818,14 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
           photos={form.photos}
           error={errors.photos}
           onChange={(v) => update("photos", v)}
+        />
+
+        {/* 7 — Sign-off */}
+        <SignatureSection
+          signatures={form.signatures}
+          employeeName={form.employee_name}
+          clientName={form.client_name}
+          onChange={(v) => update("signatures", v)}
         />
 
         {/* Sticky action bar */}
@@ -1328,6 +1371,226 @@ function PhotosSection({
         {error && <p className="mt-2 text-xs font-medium text-destructive">{error}</p>}
       </div>
     </Card>
+  );
+}
+
+/* ------------------------------------------------------------------ signoff */
+
+function SignatureSection({
+  signatures,
+  employeeName,
+  clientName,
+  onChange,
+}: {
+  signatures: MomSignatures;
+  employeeName: string;
+  clientName: string;
+  onChange: (v: MomSignatures) => void;
+}) {
+  return (
+    <Card id="section-signoff" className="scroll-mt-24 overflow-hidden">
+      <div className="border-b border-border px-5 py-4">
+        <p className="eyebrow mb-1.5">07 · Section</p>
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <SignatureIcon className="h-4 w-4 text-primary" />
+          Sign-off
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Optional. A captured signature prints on the PDF in place of a blank line.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+        <SignaturePad
+          label={employeeName.trim() || "Okie Dokie"}
+          value={signatures.employee}
+          onChange={(v) => onChange({ ...signatures, employee: v })}
+        />
+        <SignaturePad
+          label={clientName.trim() || "Client"}
+          value={signatures.client}
+          onChange={(v) => onChange({ ...signatures, client: v })}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function SignaturePad({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: MomSignature | null;
+  onChange: (v: MomSignature | null) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const drawing = useRef(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  // Blank canvases only exist while there's no saved signature — size it
+  // (accounting for device pixel ratio, so strokes stay crisp) whenever one
+  // mounts, including right after "Clear signature" removes the saved one.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || value) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#2A1613";
+  }, [value]);
+
+  const pointFromEvent = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drawing.current = true;
+    const { x, y } = pointFromEvent(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!drawing.current) return;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const { x, y } = pointFromEvent(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    if (!hasDrawn) setHasDrawn(true);
+  };
+
+  const endStroke = () => {
+    drawing.current = false;
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasDrawn(false);
+  };
+
+  const save = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setSaving(true);
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("Couldn't capture the signature.");
+      const path = `${crypto.randomUUID()}.png`;
+      const { error: upErr } = await supabase.storage
+        .from("mom-signatures")
+        .upload(path, blob, { cacheControl: "3600", upsert: false });
+      if (upErr) throw new Error(upErr.message);
+      const { data: signed, error: sErr } = await supabase.storage
+        .from("mom-signatures")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      if (sErr || !signed) throw new Error("Couldn't get a link.");
+      onChange({ path, url: signed.signedUrl });
+      toast.success("Signature saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the signature.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const clearSaved = async () => {
+    if (!value) return;
+    setClearing(true);
+    try {
+      await supabase.storage.from("mom-signatures").remove([value.path]);
+    } catch {
+      /* the record matters more than an orphaned file */
+    } finally {
+      onChange(null);
+      setClearing(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/40 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
+      {value ? (
+        <div className="space-y-2">
+          <div className="flex h-32 items-center justify-center rounded-md border border-border bg-card">
+            <img
+              src={value.url}
+              alt={`${label}'s signature`}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => void clearSaved()}
+            disabled={clearing}
+            className="w-full gap-1.5 text-muted-foreground hover:text-destructive"
+          >
+            {clearing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Eraser className="h-3.5 w-3.5" />
+            )}
+            Clear signature
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <canvas
+            ref={canvasRef}
+            className="h-32 w-full touch-none rounded-md border border-dashed border-border bg-card"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endStroke}
+            onPointerLeave={endStroke}
+          />
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={clearCanvas}
+              disabled={!hasDrawn}
+              className="gap-1.5 text-muted-foreground"
+            >
+              <Eraser className="h-3.5 w-3.5" /> Clear
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void save()}
+              disabled={!hasDrawn || saving}
+              className="flex-1 gap-1.5"
+            >
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <SignatureIcon className="h-3.5 w-3.5" />
+              )}
+              {saving ? "Saving…" : "Save signature"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

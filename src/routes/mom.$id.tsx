@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMom } from "@/lib/mom.functions";
-import type { Attendee, PendingPoint } from "@/lib/mom-types";
+import type { Attendee, MomSignature, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
@@ -241,6 +241,15 @@ function DetailPage() {
           </Section>
         )}
 
+        {(mom.signatures?.employee || mom.signatures?.client) && (
+          <Section title="Sign-off">
+            <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2">
+              <SignatureBlock label={mom.employee_name} signature={mom.signatures.employee} />
+              <SignatureBlock label={mom.client_name} signature={mom.signatures.client} />
+            </div>
+          </Section>
+        )}
+
         <div className="flex items-center justify-center gap-3 pt-2">
           <Seal className="h-9 w-9 text-muted-foreground/50" topText="" bottomText="" />
           <p className="eyebrow">Recorded by Okie Dokie · MOM Portal</p>
@@ -276,6 +285,27 @@ function Section({
       </div>
       {children}
     </Card>
+  );
+}
+
+function SignatureBlock({ label, signature }: { label: string; signature: MomSignature | null }) {
+  return (
+    <div>
+      <p className="eyebrow mb-3">{label}</p>
+      {signature ? (
+        <div className="flex h-28 items-center justify-center rounded-lg border border-border bg-card">
+          <img
+            src={signature.url}
+            alt={`${label}'s signature`}
+            className="max-h-full max-w-full object-contain p-3"
+          />
+        </div>
+      ) : (
+        <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-border">
+          <p className="text-sm text-muted-foreground">Not signed</p>
+        </div>
+      )}
+    </div>
   );
 }
 

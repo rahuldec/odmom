@@ -27,6 +27,7 @@ export type Database = {
           meeting_type: string
           pending_points: Json
           photos: Json
+          signatures: Json
           summary: string | null
           updated_at: string
           work_completed: Json
@@ -43,6 +44,7 @@ export type Database = {
           meeting_type: string
           pending_points?: Json
           photos?: Json
+          signatures?: Json
           summary?: string | null
           updated_at?: string
           work_completed?: Json
@@ -59,6 +61,7 @@ export type Database = {
           meeting_type?: string
           pending_points?: Json
           photos?: Json
+          signatures?: Json
           summary?: string | null
           updated_at?: string
           work_completed?: Json
