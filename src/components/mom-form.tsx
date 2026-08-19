@@ -548,18 +548,22 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                         update("attendees", copy);
                       }}
                     />
-                    <Segmented
+                    <Select
                       value={a.team}
-                      onChange={(v) => {
+                      onValueChange={(v) => {
                         const copy = form.attendees.slice();
-                        copy[i] = { ...a, team: v };
+                        copy[i] = { ...a, team: v as AttendeeTeam };
                         update("attendees", copy);
                       }}
-                      options={[
-                        { value: "client" as AttendeeTeam, label: "Client" },
-                        { value: "okie_dokie" as AttendeeTeam, label: "Okie Dokie" },
-                      ]}
-                    />
+                    >
+                      <SelectTrigger aria-label="Team">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="client">Client</SelectItem>
+                        <SelectItem value="okie_dokie">Okie Dokie</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </Row>
