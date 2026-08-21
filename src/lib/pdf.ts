@@ -46,6 +46,32 @@ function loadImage(url: string): Promise<LoadedImage | null> {
         const res = await fetch(url);
         if (!res.ok) return resolve(null);
         const blob = await res.blob();
+
+        // Phone photos carry EXIF orientation. jsPDF ignores it, so bake the
+        // rotation into the pixels by decoding with `from-image` orientation
+        // and re-encoding through a canvas.
+        if (typeof createImageBitmap === "function") {
+          try {
+            const bitmap = await createImageBitmap(blob, { imageOrientation: "from-image" });
+            const canvas = document.createElement("canvas");
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+              ctx.drawImage(bitmap, 0, 0);
+              bitmap.close?.();
+              return resolve({
+                dataUrl: canvas.toDataURL("image/jpeg", 0.92),
+                width: canvas.width,
+                height: canvas.height,
+              });
+            }
+            bitmap.close?.();
+          } catch {
+            /* fall through to the plain decode below */
+          }
+        }
+
         const dataUrl = await new Promise<string>((res2, rej2) => {
           const reader = new FileReader();
           reader.onload = () => res2(reader.result as string);
@@ -65,6 +91,7 @@ function loadImage(url: string): Promise<LoadedImage | null> {
     })();
   });
 }
+
 
 // Scale (imgW, imgH) down to fit inside (boxW, boxH) while preserving aspect ratio.
 function fitInBox(imgW: number, imgH: number, boxW: number, boxH: number) {
