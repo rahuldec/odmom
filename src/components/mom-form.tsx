@@ -9,6 +9,7 @@ import {
 import {
   AlarmClockCheck,
   Check,
+  Camera,
   ClipboardCheck,
   GripVertical,
   ImagePlus,
