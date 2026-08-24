@@ -1090,7 +1090,7 @@ function PhotosSection({
   latest.current = photos;
 
   const addFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], kind: "general" | "selfie" = "general") => {
       if (!files.length) return;
       setUploading(true);
       const added: MomPhoto[] = [];
@@ -1120,15 +1120,24 @@ function PhotosSection({
             toast.error(`${file.name}: couldn't get a link.`);
             continue;
           }
-          added.push({ path, url: signed.signedUrl });
+          added.push(
+            kind === "selfie"
+              ? { path, url: signed.signedUrl, kind, caption: "Selfie with app poster" }
+              : { path, url: signed.signedUrl },
+          );
         }
         if (added.length) {
           onChange([...latest.current, ...added]);
-          toast.success(`Added ${added.length} photo${added.length > 1 ? "s" : ""}`);
+          toast.success(
+            kind === "selfie"
+              ? "Selfie with app poster added"
+              : `Added ${added.length} photo${added.length > 1 ? "s" : ""}`,
+          );
         }
       } finally {
         setUploading(false);
         if (inputRef.current) inputRef.current.value = "";
+        if (selfieRef.current) selfieRef.current.value = "";
       }
     },
     [onChange],
