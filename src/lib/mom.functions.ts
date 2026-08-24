@@ -45,6 +45,7 @@ const photoSchema = z.object({
   path: z.string().min(1),
   url: z.string().min(1),
   caption: z.string().optional(),
+  kind: z.enum(["general", "selfie"]).optional(),
 });
 
 const momInputSchema = z.object({
