@@ -1318,6 +1318,11 @@ function PhotosSection({
                     alt={p.caption || `Photo ${i + 1}`}
                     className="aspect-square w-full object-cover"
                   />
+                  {p.kind === "selfie" && (
+                    <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                      <Camera className="h-3 w-3" /> Selfie
+                    </span>
+                  )}
                   <div className="absolute right-1.5 top-1.5 flex gap-1">
                     <button
                       type="button"
