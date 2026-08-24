@@ -1083,6 +1083,7 @@ function PhotosSection({
   ref?: React.Ref<PhotosHandle>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const selfieRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [rotating, setRotating] = useState<number | null>(null);
