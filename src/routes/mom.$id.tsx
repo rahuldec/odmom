@@ -223,13 +223,18 @@ function DetailPage() {
                   href={p.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="group block overflow-hidden rounded-lg border border-border bg-card"
+                  className="group relative block overflow-hidden rounded-lg border border-border bg-card"
                 >
                   <img
                     src={p.url}
                     alt={p.caption || `Photo ${i + 1}`}
                     className="aspect-square w-full object-cover transition-transform group-hover:scale-105"
                   />
+                  {p.kind === "selfie" && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                      Selfie
+                    </span>
+                  )}
                   {p.caption && (
                     <p className="border-t border-border px-2 py-1.5 text-xs text-muted-foreground">
                       {p.caption}
