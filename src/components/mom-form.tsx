@@ -1227,7 +1227,7 @@ function PhotosSection({
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Whiteboards, screens, the room. At least one is required — drag files in or paste a
-            screenshot.
+            screenshot. Use the selfie button for a photo with the app poster.
           </p>
         </div>
         <input
@@ -1238,20 +1238,41 @@ function PhotosSection({
           className="hidden"
           onChange={(e) => void addFiles(Array.from(e.target.files ?? []))}
         />
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="shrink-0 gap-1.5"
-        >
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Plus className="h-3.5 w-3.5" />
-          )}
-          {uploading ? "Uploading…" : "Add photos"}
-        </Button>
+        <input
+          ref={selfieRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => void addFiles(Array.from(e.target.files ?? []), "selfie")}
+        />
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => selfieRef.current?.click()}
+            disabled={uploading}
+            className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Selfie with app poster
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="gap-1.5"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            {uploading ? "Uploading…" : "Add photos"}
+          </Button>
+        </div>
       </div>
 
       <div className="p-5">
