@@ -26,7 +26,13 @@ export const PENDING_WITH: { value: PendingWith; label: string }[] = [
   { value: "client", label: "Client" },
 ];
 
-export type MomPhoto = { path: string; url: string; caption?: string };
+export type MomPhotoKind = "general" | "selfie";
+export type MomPhoto = {
+  path: string;
+  url: string;
+  caption?: string;
+  kind?: MomPhotoKind;
+};
 
 export type MOM = {
   id: string;
