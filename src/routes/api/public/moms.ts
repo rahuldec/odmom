@@ -24,6 +24,7 @@ const photoSchema = z.object({
   path: z.string().min(1),
   url: z.string().min(1),
   caption: z.string().optional(),
+  kind: z.enum(["general", "selfie"]).optional(),
 });
 const momSchema = z.object({
   client_name: z.string().min(1).max(200),
