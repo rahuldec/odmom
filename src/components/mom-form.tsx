@@ -9,6 +9,7 @@ import {
 import {
   AlarmClockCheck,
   Check,
+  Camera,
   ClipboardCheck,
   GripVertical,
   ImagePlus,
@@ -1083,6 +1084,7 @@ function PhotosSection({
   ref?: React.Ref<PhotosHandle>;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const selfieRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [rotating, setRotating] = useState<number | null>(null);
@@ -1090,7 +1092,7 @@ function PhotosSection({
   latest.current = photos;
 
   const addFiles = useCallback(
-    async (files: File[]) => {
+    async (files: File[], kind: "general" | "selfie" = "general") => {
       if (!files.length) return;
       setUploading(true);
       const added: MomPhoto[] = [];
@@ -1120,15 +1122,24 @@ function PhotosSection({
             toast.error(`${file.name}: couldn't get a link.`);
             continue;
           }
-          added.push({ path, url: signed.signedUrl });
+          added.push(
+            kind === "selfie"
+              ? { path, url: signed.signedUrl, kind, caption: "Selfie with app poster" }
+              : { path, url: signed.signedUrl },
+          );
         }
         if (added.length) {
           onChange([...latest.current, ...added]);
-          toast.success(`Added ${added.length} photo${added.length > 1 ? "s" : ""}`);
+          toast.success(
+            kind === "selfie"
+              ? "Selfie with app poster added"
+              : `Added ${added.length} photo${added.length > 1 ? "s" : ""}`,
+          );
         }
       } finally {
         setUploading(false);
         if (inputRef.current) inputRef.current.value = "";
+        if (selfieRef.current) selfieRef.current.value = "";
       }
     },
     [onChange],
@@ -1217,7 +1228,7 @@ function PhotosSection({
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Whiteboards, screens, the room. At least one is required — drag files in or paste a
-            screenshot.
+            screenshot. Use the selfie button for a photo with the app poster.
           </p>
         </div>
         <input
@@ -1228,20 +1239,41 @@ function PhotosSection({
           className="hidden"
           onChange={(e) => void addFiles(Array.from(e.target.files ?? []))}
         />
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="shrink-0 gap-1.5"
-        >
-          {uploading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Plus className="h-3.5 w-3.5" />
-          )}
-          {uploading ? "Uploading…" : "Add photos"}
-        </Button>
+        <input
+          ref={selfieRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          className="hidden"
+          onChange={(e) => void addFiles(Array.from(e.target.files ?? []), "selfie")}
+        />
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => selfieRef.current?.click()}
+            disabled={uploading}
+            className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5"
+          >
+            <Camera className="h-3.5 w-3.5" />
+            Selfie with app poster
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="gap-1.5"
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Plus className="h-3.5 w-3.5" />
+            )}
+            {uploading ? "Uploading…" : "Add photos"}
+          </Button>
+        </div>
       </div>
 
       <div className="p-5">
@@ -1286,6 +1318,11 @@ function PhotosSection({
                     alt={p.caption || `Photo ${i + 1}`}
                     className="aspect-square w-full object-cover"
                   />
+                  {p.kind === "selfie" && (
+                    <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                      <Camera className="h-3 w-3" /> Selfie
+                    </span>
+                  )}
                   <div className="absolute right-1.5 top-1.5 flex gap-1">
                     <button
                       type="button"
