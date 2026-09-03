@@ -52,6 +52,8 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
       id: z.string().uuid(),
       taskId: z.string().min(1),
       pdfData: z.string().optional(), // base64 encoded PDF (optional)
+      clientName: z.string(),
+      meetingDate: z.string(),
     }).parse(input),
   )
   .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
@@ -77,6 +79,36 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
 
     if (!updateResponse.ok) {
       throw new Error("Failed to update task description");
+    }
+
+    // Attach PDF if provided
+    if (data.pdfData) {
+      try {
+        const binaryString = atob(data.pdfData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const blob = new Blob([bytes], { type: "application/pdf" });
+
+        const formData = new FormData();
+        const safe = data.clientName.replace(/[^a-z0-9]+/gi, "_");
+        formData.append("file", blob, `MOM_${safe}_${data.meetingDate}.pdf`);
+
+        const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
+          },
+          body: formData,
+        });
+
+        if (!attachResponse.ok) {
+          console.error("Failed to attach PDF to Asana task");
+        }
+      } catch (error) {
+        console.error("Error attaching PDF:", error);
+      }
     }
 
     return {

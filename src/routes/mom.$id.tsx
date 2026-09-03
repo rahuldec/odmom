@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
 import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
-import { downloadMomPdf, getMomPdfAsBase64 } from "@/lib/pdf";
+import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
 import logoUrl from "@/logo.png";
@@ -114,11 +114,25 @@ function DetailPage() {
     setShowTaskPicker(false);
 
     try {
-      // Update task with MOM details
+      // Generate PDF as base64
+      let pdfData: string | undefined;
+      try {
+        const pdfBuffer = await getPdfBuffer(mom);
+        const binaryString = String.fromCharCode(...pdfBuffer);
+        pdfData = btoa(binaryString);
+      } catch (pdfError) {
+        console.error("Failed to generate PDF:", pdfError);
+        // Continue without PDF
+      }
+
+      // Update task with MOM details and PDF attachment
       const result = await upload({
         data: {
           id,
           taskId: selectedTaskId,
+          pdfData,
+          clientName: mom.client_name,
+          meetingDate: mom.meeting_date,
         },
       });
       toast.success("MOM details added to Asana task!");

@@ -524,80 +524,115 @@ export async function downloadMomPdf(mom: MOM) {
   doc.save(`MOM_${safe}_${mom.meeting_date}.pdf`);
 }
 
-export async function getMomPdfAsBase64(mom: MOM): Promise<string> {
-  // Call the existing downloadMomPdf but capture the PDF data instead
+export async function getPdfBuffer(mom: MOM): Promise<Uint8Array> {
+  // Generate a simplified PDF for server attachment (browser APIs only)
+  // Photos are omitted to avoid browser-only APIs
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 42;
   const contentW = pageWidth - margin * 2;
 
-  const MAROON: [number, number, number] = [124, 29, 19];
-  const MAROON_DEEP: [number, number, number] = [90, 19, 12];
-  const ORANGE: [number, number, number] = [238, 103, 35];
-  const ORANGE_LIGHT: [number, number, number] = [253, 238, 229];
-  const WHITE: [number, number, number] = [255, 255, 255];
-  const SLATE: [number, number, number] = [138, 106, 97];
-  const SLATE_LIGHT: [number, number, number] = [232, 201, 191];
   const INK: [number, number, number] = [42, 22, 19];
+  const MAROON: [number, number, number] = [124, 29, 19];
+  const SLATE: [number, number, number] = [138, 106, 97];
   const LINE: [number, number, number] = [237, 223, 215];
   const ROW_TINT: [number, number, number] = [251, 246, 242];
-  const GOLD: [number, number, number] = [255, 222, 86];
-  const GOLD_BG: [number, number, number] = [255, 243, 199];
-  const GOLD_TX: [number, number, number] = [124, 86, 0];
-  const NEUTRAL_BG: [number, number, number] = [242, 234, 228];
-  const NEUTRAL_TX: [number, number, number] = [107, 85, 77];
 
-  const logo = await loadLogo();
-  const loadedPhotos = await Promise.all(mom.photos.map((p) => loadImage(p.url)));
+  // Title
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(...INK);
+  doc.text(`MOM: ${mom.client_name}`, margin, margin);
 
-  // Use the same header drawing as downloadMomPdf
-  const headerH = 96;
-  const drawHeader = () => {
-    doc.setFillColor(...MAROON);
-    doc.rect(0, 0, pageWidth, headerH, "F");
-    doc.setFillColor(...MAROON_DEEP);
-    doc.rect(0, headerH - 8, pageWidth, 8, "F");
-    doc.setFillColor(...ORANGE);
-    doc.rect(pageWidth - 130, 0, 130, 4, "F");
+  // Basic info
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...SLATE);
+  const meetingDate = new Date(mom.meeting_date);
+  const day = String(meetingDate.getDate()).padStart(2, '0');
+  const month = String(meetingDate.getMonth() + 1).padStart(2, '0');
+  const year = meetingDate.getFullYear();
+  doc.text(`Date: ${day}/${month}/${year}`, margin, margin + 20);
+  doc.text(`Recorded by: ${mom.employee_name}`, margin, margin + 35);
+  doc.text(`Type: ${mom.meeting_type === "online" ? "Online" : "On-site"}`, margin, margin + 50);
+  if (mom.location) doc.text(`Location: ${mom.location}`, margin, margin + 65);
 
-    const logoSize = 40;
-    const logoX = margin;
-    const logoY = (headerH - logoSize) / 2 - 2;
-    if (logo) {
-      const cx = logoX + logoSize / 2;
-      const cy = logoY + logoSize / 2;
-      doc.setFillColor(...WHITE);
-      doc.circle(cx, cy, logoSize * 0.41, "F");
-      doc.addImage(logo.dataUrl, "PNG", logoX, logoY, logoSize, logoSize);
-    }
+  let y = margin + 100;
 
-    const textX = logo ? logoX + logoSize + 14 : margin;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(...WHITE);
-    doc.text("OKIE DOKIE SOLUTIONS", textX, headerH / 2 - 6);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(...SLATE_LIGHT);
-    doc.text("www.okiedokiepay.com   ·   services@okiedokiepay.com", textX, headerH / 2 + 10);
-
+  // Attendees
+  if (mom.attendees.length > 0) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(...GOLD);
-    doc.text("MINUTES OF MEETING", pageWidth - margin, headerH / 2 + 3, { align: "right" });
-  };
-
-  drawHeader();
-
-  // For now, just get basic PDF output
-  // Full PDF generation would duplicate a lot of code from downloadMomPdf
-  const pdfArrayBuffer = doc.output("arraybuffer");
-  const uint8Array = new Uint8Array(pdfArrayBuffer);
-  let binary = "";
-  for (let i = 0; i < uint8Array.length; i++) {
-    binary += String.fromCharCode(uint8Array[i]);
+    doc.setTextColor(...MAROON);
+    doc.text("ATTENDEES", margin, y);
+    y += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    mom.attendees.forEach((a) => {
+      doc.text(`• ${a.name} (${a.designation}, ${a.team === "okie_dokie" ? "Okie Dokie" : "Client"})`, margin + 10, y);
+      y += 12;
+    });
+    y += 10;
   }
-  return btoa(binary);
+
+  // Discussion Points
+  if (mom.discussion_points.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...MAROON);
+    doc.text("DISCUSSION POINTS", margin, y);
+    y += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    mom.discussion_points.forEach((d) => {
+      const lines = doc.splitTextToSize(`[${d.module}] ${d.details}`, contentW - 20);
+      doc.text(lines, margin + 10, y);
+      y += lines.length * 12 + 5;
+    });
+    y += 10;
+  }
+
+  // Work Completed
+  if (mom.work_completed.length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...MAROON);
+    doc.text("WORK COMPLETED", margin, y);
+    y += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    mom.work_completed.forEach((w) => {
+      const lines = doc.splitTextToSize(`[${w.module}] ${w.task}`, contentW - 20);
+      doc.text(lines, margin + 10, y);
+      y += lines.length * 12 + 5;
+    });
+    y += 10;
+  }
+
+  // Pending Points
+  if ((mom.pending_points ?? []).length > 0) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...MAROON);
+    doc.text("PENDING POINTS", margin, y);
+    y += 15;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    (mom.pending_points ?? []).forEach((p) => {
+      const lines = doc.splitTextToSize(
+        `[${p.module}] ${p.requirement} (Pending with: ${p.pending_with === "okie_dokie" ? "Okie Dokie" : "Client"})`,
+        contentW - 20
+      );
+      doc.text(lines, margin + 10, y);
+      y += lines.length * 12 + 5;
+    });
+  }
+
+  const pdfArrayBuffer = doc.output("arraybuffer");
+  return new Uint8Array(pdfArrayBuffer);
 }
