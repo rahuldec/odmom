@@ -80,7 +80,103 @@ export const getTodaysTasks = createServerFn({ method: "GET" })
       .map((task) => ({ gid: task.gid, name: task.name }));
   });
 
+async function attachPdfToTask(
+  taskId: string,
+  pdfData: string,
+  clientName: string,
+  meetingDate: string,
+) {
+  const boundary = `----FormBoundary${Date.now()}`;
+  const buffer = Buffer.from(pdfData, "base64");
+  const safe = clientName.replace(/[^a-z0-9]+/gi, "_");
+  const filename = `MOM_${safe}_${meetingDate}.pdf`;
+
+  const parts = [
+    `--${boundary}`,
+    `Content-Disposition: form-data; name="file"; filename="${filename}"`,
+    `Content-Type: application/pdf`,
+    ``,
+  ];
+
+  const body = Buffer.concat([
+    Buffer.from(parts.join("\r\n") + "\r\n"),
+    buffer,
+    Buffer.from(`\r\n--${boundary}--\r\n`),
+  ]);
+
+  const token = await getValidToken();
+  const res = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  });
+
+  if (!res.ok) {
+    console.error(`PDF attach failed [${res.status}]: ${await res.text()}`);
+  }
+}
+
+/** Creates a brand-new Asana task for this MOM and attaches the PDF. */
+export const createMomAsanaTask = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        pdfData: z.string().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
+    const projectId = process.env.ASANA_PROJECT_ID ?? ASANA_PROJECT_ID;
+    if (!projectId) throw new Error("Asana project ID not configured");
+
+    const mom = await getMom({ data: { id: data.id } });
+    if (!mom) throw new Error("MOM not found");
+
+    const meetingDate = mom.meeting_date.slice(0, 10);
+    const taskName = `MOM — ${mom.client_name} — ${meetingDate}`;
+
+    const createRes = await fetch(`${ASANA_API_BASE}/tasks`, {
+      method: "POST",
+      headers: await getAsanaHeaders(),
+      body: JSON.stringify({
+        data: {
+          projects: [projectId],
+          name: taskName,
+          notes: formatAsanaTaskDescription(mom),
+          due_on: meetingDate,
+        },
+      }),
+    });
+
+    if (!createRes.ok) {
+      throw new Error(
+        `Failed to create Asana task [${createRes.status}]: ${await createRes.text()}`,
+      );
+    }
+
+    const created = (await createRes.json()) as { data: { gid: string; permalink_url?: string } };
+    const taskId = created.data.gid;
+
+    if (data.pdfData) {
+      try {
+        await attachPdfToTask(taskId, data.pdfData, mom.client_name, meetingDate);
+      } catch (error) {
+        console.error("Error attaching PDF:", String(error));
+      }
+    }
+
+    return {
+      task_id: taskId,
+      task_url: created.data.permalink_url ?? `https://app.asana.com/0/${projectId}/${taskId}`,
+    };
+  });
+
 export const uploadMomToAsana = createServerFn({ method: "POST" })
+
   .inputValidator((input: unknown) =>
     z.object({
       id: z.string().uuid(),
