@@ -84,16 +84,13 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     // Attach PDF if provided
     if (data.pdfData) {
       try {
-        const binaryString = atob(data.pdfData);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: "application/pdf" });
-
+        const buffer = Buffer.from(data.pdfData, "base64");
         const formData = new FormData();
         const safe = data.clientName.replace(/[^a-z0-9]+/gi, "_");
-        formData.append("file", blob, `MOM_${safe}_${data.meetingDate}.pdf`);
+
+        // Create a Blob-like object for FormData
+        const file = new File([buffer], `MOM_${safe}_${data.meetingDate}.pdf`, { type: "application/pdf" });
+        formData.append("file", file);
 
         const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
           method: "POST",
@@ -104,7 +101,8 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
         });
 
         if (!attachResponse.ok) {
-          console.error("Failed to attach PDF to Asana task");
+          const attachError = await attachResponse.text();
+          console.error("Failed to attach PDF to Asana task:", attachResponse.status, attachError);
         }
       } catch (error) {
         console.error("Error attaching PDF:", error);
