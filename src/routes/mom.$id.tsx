@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Download, Loader2, Pencil, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil, Printer, Share2, Upload } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Seal } from "@/components/seal";
 import { ModuleChip } from "@/components/chips";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMom } from "@/lib/mom.functions";
+import { uploadMomToAsana } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
@@ -24,7 +25,9 @@ export const Route = createFileRoute("/mom/$id")({
 function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
+  const upload = useServerFn(uploadMomToAsana);
   const [downloading, setDownloading] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const { data: mom, isLoading } = useQuery({
     queryKey: ["mom", id],
@@ -85,6 +88,20 @@ function DetailPage() {
     }
   };
 
+  const handleUploadToAsana = async () => {
+    setUploading(true);
+    try {
+      const result = await upload({ data: { id } });
+      toast.success("MOM uploaded to Asana!");
+      // Open the Asana task in a new tab
+      window.open(result.task_url, "_blank");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to upload to Asana. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const ours = (mom.pending_points ?? []).filter((p) => p.pending_with === "okie_dokie");
   const theirs = (mom.pending_points ?? []).filter((p) => p.pending_with === "client");
   const clientSide = mom.attendees.filter((a) => a.team === "client");
@@ -112,6 +129,20 @@ function DetailPage() {
               <Download className="h-4 w-4" />
             )}
             Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => void handleUploadToAsana()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            Upload to Asana
           </Button>
           <Button
             variant="outline"

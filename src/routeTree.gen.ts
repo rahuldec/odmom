@@ -9,26 +9,26 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as MeetingsRouteImport } from './routes/meetings'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as MomNewRouteImport } from './routes/mom.new'
-import { Route as MomIdRouteImport } from './routes/mom.$id'
+import { Route as MeetingsRouteImport } from './routes/meetings'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
+import { Route as MomIdRouteImport } from './routes/mom.$id'
+import { Route as MomNewRouteImport } from './routes/mom.new'
 import { Route as ApiPublicMomsRouteImport } from './routes/api/public/moms'
 
-const MeetingsRoute = MeetingsRouteImport.update({
-  id: '/meetings',
-  path: '/meetings',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MomNewRoute = MomNewRouteImport.update({
-  id: '/mom/new',
-  path: '/mom/new',
+const MeetingsRoute = MeetingsRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditIdRoute = EditIdRouteImport.update({
+  id: '/edit/$id',
+  path: '/edit/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MomIdRoute = MomIdRouteImport.update({
@@ -36,9 +36,9 @@ const MomIdRoute = MomIdRouteImport.update({
   path: '/mom/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EditIdRoute = EditIdRouteImport.update({
-  id: '/edit/$id',
-  path: '/edit/$id',
+const MomNewRoute = MomNewRouteImport.update({
+  id: '/mom/new',
+  path: '/mom/new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicMomsRoute = ApiPublicMomsRouteImport.update({
@@ -110,13 +110,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/meetings': {
-      id: '/meetings'
-      path: '/meetings'
-      fullPath: '/meetings'
-      preLoaderRoute: typeof MeetingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -124,11 +117,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/mom/new': {
-      id: '/mom/new'
-      path: '/mom/new'
-      fullPath: '/mom/new'
-      preLoaderRoute: typeof MomNewRouteImport
+    '/meetings': {
+      id: '/meetings'
+      path: '/meetings'
+      fullPath: '/meetings'
+      preLoaderRoute: typeof MeetingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/edit/$id': {
+      id: '/edit/$id'
+      path: '/edit/$id'
+      fullPath: '/edit/$id'
+      preLoaderRoute: typeof EditIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mom/$id': {
@@ -138,11 +138,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MomIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/edit/$id': {
-      id: '/edit/$id'
-      path: '/edit/$id'
-      fullPath: '/edit/$id'
-      preLoaderRoute: typeof EditIdRouteImport
+    '/mom/new': {
+      id: '/mom/new'
+      path: '/mom/new'
+      fullPath: '/mom/new'
+      preLoaderRoute: typeof MomNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/moms': {
