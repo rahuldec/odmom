@@ -114,11 +114,209 @@ function DetailPage() {
     setShowTaskPicker(false);
 
     try {
-      // Generate PDF as base64
+      // Generate full PDF as base64 (same one as download)
       let pdfData: string | undefined;
       try {
-        const pdfBuffer = await getPdfBuffer(mom);
-        const binaryString = String.fromCharCode(...pdfBuffer);
+        const doc = await (async () => {
+          const { jsPDF } = await import("jspdf");
+          const { default: autoTable } = await import("jspdf-autotable");
+
+          const newDoc = new jsPDF({ unit: "pt", format: "a4" });
+          const pageWidth = newDoc.internal.pageSize.getWidth();
+          const pageHeight = newDoc.internal.pageSize.getHeight();
+          const margin = 42;
+          const contentW = pageWidth - margin * 2;
+
+          const MAROON: [number, number, number] = [124, 29, 19];
+          const MAROON_DEEP: [number, number, number] = [90, 19, 12];
+          const ORANGE: [number, number, number] = [238, 103, 35];
+          const WHITE: [number, number, number] = [255, 255, 255];
+          const SLATE_LIGHT: [number, number, number] = [232, 201, 191];
+          const INK: [number, number, number] = [42, 22, 19];
+          const LINE: [number, number, number] = [237, 223, 215];
+          const ROW_TINT: [number, number, number] = [251, 246, 242];
+
+          // Simplified header (no logo due to browser API limitations on client)
+          newDoc.setFillColor(...MAROON);
+          newDoc.rect(0, 0, pageWidth, 60, "F");
+          newDoc.setFillColor(...MAROON_DEEP);
+          newDoc.rect(0, 52, pageWidth, 8, "F");
+          newDoc.setFillColor(...ORANGE);
+          newDoc.rect(pageWidth - 130, 0, 130, 4, "F");
+
+          newDoc.setFont("helvetica", "bold");
+          newDoc.setFontSize(15);
+          newDoc.setTextColor(...WHITE);
+          newDoc.text("OKIE DOKIE SOLUTIONS", margin, 28);
+
+          newDoc.setFont("helvetica", "normal");
+          newDoc.setFontSize(8.5);
+          newDoc.setTextColor(...SLATE_LIGHT);
+          newDoc.text("www.okiedokiepay.com   ·   services@okiedokiepay.com", margin, 42);
+
+          newDoc.setFont("helvetica", "bold");
+          newDoc.setFontSize(11);
+          newDoc.setTextColor(...ORANGE);
+          newDoc.text("MINUTES OF MEETING", pageWidth - margin, 32, { align: "right" });
+
+          let y = 90;
+
+          // Title
+          newDoc.setFont("helvetica", "bold");
+          newDoc.setFontSize(18);
+          newDoc.setTextColor(...INK);
+          newDoc.text(`Meeting with ${mom.client_name}`, margin, y);
+          y += 20;
+
+          const dateLabel = new Date(mom.meeting_date).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+          newDoc.setFont("helvetica", "normal");
+          newDoc.setFontSize(10);
+          newDoc.setTextColor(...MAROON);
+          newDoc.text(dateLabel, margin, y);
+          y += 20;
+
+          // Attendees
+          if (mom.attendees.length > 0) {
+            newDoc.setFont("helvetica", "bold");
+            newDoc.setFontSize(11);
+            newDoc.text("ATTENDEES", margin, y);
+            y += 12;
+            autoTable(newDoc, {
+              startY: y,
+              head: [["Name", "Designation", "Team"]],
+              body: mom.attendees.map((a) => [
+                a.name,
+                a.designation,
+                a.team === "okie_dokie" ? "Okie Dokie Team" : "Client",
+              ]),
+              columnStyles: { 2: { halign: "center", cellWidth: 110 } },
+              styles: {
+                fontSize: 8.5,
+                cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
+                textColor: INK,
+                lineColor: LINE,
+                lineWidth: 0.5,
+              },
+              headStyles: {
+                fillColor: MAROON,
+                textColor: WHITE,
+                fontStyle: "bold",
+                fontSize: 8,
+              },
+              alternateRowStyles: { fillColor: ROW_TINT },
+              margin: { left: margin, right: margin },
+            });
+            // @ts-expect-error autotable
+            y = newDoc.lastAutoTable.finalY + 15;
+          }
+
+          // Discussion Points
+          if (mom.discussion_points.length > 0) {
+            newDoc.setFont("helvetica", "bold");
+            newDoc.setFontSize(11);
+            newDoc.text("DISCUSSION POINTS", margin, y);
+            y += 12;
+            autoTable(newDoc, {
+              startY: y,
+              head: [["Module", "Details"]],
+              body: mom.discussion_points.map((d) => [d.module, d.details]),
+              columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" } },
+              styles: {
+                fontSize: 8.5,
+                cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
+                textColor: INK,
+                lineColor: LINE,
+                lineWidth: 0.5,
+              },
+              headStyles: {
+                fillColor: MAROON,
+                textColor: WHITE,
+                fontStyle: "bold",
+                fontSize: 8,
+              },
+              alternateRowStyles: { fillColor: ROW_TINT },
+              margin: { left: margin, right: margin },
+            });
+            // @ts-expect-error autotable
+            y = newDoc.lastAutoTable.finalY + 15;
+          }
+
+          // Work Completed
+          if (mom.work_completed.length > 0) {
+            newDoc.setFont("helvetica", "bold");
+            newDoc.setFontSize(11);
+            newDoc.text("WORK COMPLETED", margin, y);
+            y += 12;
+            autoTable(newDoc, {
+              startY: y,
+              head: [["Module", "Task Completed"]],
+              body: mom.work_completed.map((w) => [w.module, w.task]),
+              columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" } },
+              styles: {
+                fontSize: 8.5,
+                cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
+                textColor: INK,
+                lineColor: LINE,
+                lineWidth: 0.5,
+              },
+              headStyles: {
+                fillColor: MAROON,
+                textColor: WHITE,
+                fontStyle: "bold",
+                fontSize: 8,
+              },
+              alternateRowStyles: { fillColor: ROW_TINT },
+              margin: { left: margin, right: margin },
+            });
+            // @ts-expect-error autotable
+            y = newDoc.lastAutoTable.finalY + 15;
+          }
+
+          // Pending Points
+          if ((mom.pending_points ?? []).length > 0) {
+            newDoc.setFont("helvetica", "bold");
+            newDoc.setFontSize(11);
+            newDoc.text("PENDING POINTS", margin, y);
+            y += 12;
+            autoTable(newDoc, {
+              startY: y,
+              head: [["Module", "Requirement", "Pending With"]],
+              body: (mom.pending_points ?? []).map((p) => [
+                p.module,
+                p.requirement,
+                p.pending_with === "okie_dokie" ? "Okie Dokie Team" : "Client",
+              ]),
+              columnStyles: {
+                0: { cellWidth: 100, fontStyle: "bold" },
+                2: { cellWidth: 110, halign: "center" },
+              },
+              styles: {
+                fontSize: 8.5,
+                cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
+                textColor: INK,
+                lineColor: LINE,
+                lineWidth: 0.5,
+              },
+              headStyles: {
+                fillColor: MAROON,
+                textColor: WHITE,
+                fontStyle: "bold",
+                fontSize: 8,
+              },
+              alternateRowStyles: { fillColor: ROW_TINT },
+              margin: { left: margin, right: margin },
+            });
+          }
+
+          return newDoc;
+        })();
+
+        const pdfArrayBuffer = doc.output("arraybuffer");
+        const binaryString = String.fromCharCode(...new Uint8Array(pdfArrayBuffer));
         pdfData = btoa(binaryString);
       } catch (pdfError) {
         console.error("Failed to generate PDF:", pdfError);
@@ -135,7 +333,7 @@ function DetailPage() {
           meetingDate: mom.meeting_date,
         },
       });
-      toast.success("MOM details added to Asana task!");
+      toast.success("MOM details and PDF added to Asana task!");
       // Open the Asana task in a new tab
       window.open(result.task_url, "_blank");
       setSelectedTaskId("");
