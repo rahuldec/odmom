@@ -2,15 +2,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Download, Loader2, Pencil, Printer, Share2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Link2, Loader2, Pencil, Printer, Search, Share2, Upload } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Seal } from "@/components/seal";
 import { ModuleChip } from "@/components/chips";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
-import { createMomAsanaTask } from "@/lib/asana.functions";
+import { createMomAsanaTask, uploadMomToAsana, getProjectTasks } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
@@ -26,8 +30,19 @@ function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
   const createTask = useServerFn(createMomAsanaTask);
+  const addToTask = useServerFn(uploadMomToAsana);
+  const listTasks = useServerFn(getProjectTasks);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [taskQuery, setTaskQuery] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState("");
+
+  const { data: projectTasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ["asanaProjectTasks"],
+    queryFn: () => listTasks({}),
+    enabled: pickerOpen,
+  });
 
   const { data: mom, isLoading } = useQuery({
     queryKey: ["mom", id],
@@ -117,6 +132,54 @@ function DetailPage() {
   };
 
 
+
+  const buildPdfBase64 = async (): Promise<string | undefined> => {
+    try {
+      const pdfBuffer = await getPdfBuffer(mom);
+      let binaryString = "";
+      const chunk = 8192;
+      for (let i = 0; i < pdfBuffer.length; i += chunk) {
+        binaryString += String.fromCharCode(...pdfBuffer.subarray(i, i + chunk));
+      }
+      return btoa(binaryString);
+    } catch (pdfError) {
+      console.error("Failed to generate PDF:", pdfError);
+      return undefined;
+    }
+  };
+
+  const handleAddToExistingTask = async () => {
+    if (!selectedTaskId) {
+      toast.error("Pick a task first");
+      return;
+    }
+    setUploading(true);
+    setPickerOpen(false);
+    try {
+      const pdfData = await buildPdfBase64();
+      const result = await addToTask({
+        data: {
+          id,
+          taskId: selectedTaskId,
+          pdfData,
+          clientName: mom.client_name,
+          meetingDate: mom.meeting_date.slice(0, 10),
+        },
+      });
+      toast.success("MOM details and PDF added to the Asana task");
+      window.open(result.task_url, "_blank");
+      setSelectedTaskId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update the Asana task. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const filteredTasks = projectTasks.filter((t) =>
+    t.name.toLowerCase().includes(taskQuery.trim().toLowerCase()),
+  );
+
   const ours = (mom.pending_points ?? []).filter((p) => p.pending_with === "okie_dokie");
   const theirs = (mom.pending_points ?? []).filter((p) => p.pending_with === "client");
   const clientSide = mom.attendees.filter((a) => a.team === "client");
@@ -158,6 +221,16 @@ function DetailPage() {
               <Upload className="h-4 w-4" />
             )}
             Create Asana task
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setPickerOpen(true)}
+            disabled={uploading}
+          >
+            <Link2 className="h-4 w-4" />
+            Add to existing task
           </Button>
           <Button
             variant="outline"
@@ -298,6 +371,70 @@ function DetailPage() {
         </div>
       </article>
 
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add to an existing Asana task</DialogTitle>
+            <DialogDescription>
+              The MOM details go into the task description and the PDF is attached.
+            </DialogDescription>
+          </DialogHeader>
+
+          {tasksLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : projectTasks.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No open tasks found in the Asana project.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={taskQuery}
+                  onChange={(e) => setTaskQuery(e.target.value)}
+                  placeholder="Search tasks"
+                  className="pl-9"
+                />
+              </div>
+
+              <RadioGroup
+                value={selectedTaskId}
+                onValueChange={setSelectedTaskId}
+                className="max-h-72 space-y-2 overflow-y-auto pr-1"
+              >
+                {filteredTasks.map((task) => (
+                  <div key={task.gid} className="flex items-start gap-2 rounded-md border p-2.5">
+                    <RadioGroupItem value={task.gid} id={`task-${task.gid}`} className="mt-0.5" />
+                    <Label htmlFor={`task-${task.gid}`} className="flex-1 cursor-pointer font-medium">
+                      {task.name}
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                        Created {formatDay(task.created_at)}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+                {filteredTasks.length === 0 && (
+                  <p className="py-6 text-center text-sm text-muted-foreground">No matching tasks.</p>
+                )}
+              </RadioGroup>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" onClick={() => setPickerOpen(false)} disabled={uploading}>
+                  Cancel
+                </Button>
+                <Button onClick={() => void handleAddToExistingTask()} disabled={uploading || !selectedTaskId}>
+                  {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add to task
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

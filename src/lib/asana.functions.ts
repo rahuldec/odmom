@@ -80,6 +80,34 @@ export const getTodaysTasks = createServerFn({ method: "GET" })
       .map((task) => ({ gid: task.gid, name: task.name }));
   });
 
+/** All open tasks in the project, newest first — for picking an existing task. */
+export const getProjectTasks = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => z.object({}).parse(input ?? {}))
+  .handler(async (): Promise<{ gid: string; name: string; created_at: string }[]> => {
+    const projectId = process.env.ASANA_PROJECT_ID ?? ASANA_PROJECT_ID;
+    if (!projectId) throw new Error("Asana project ID not configured");
+
+    const response = await fetch(
+      `${ASANA_API_BASE}/projects/${projectId}/tasks?limit=100&opt_fields=gid,name,created_at,completed`,
+      { headers: await getAsanaHeaders() },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch Asana tasks [${response.status}]: ${await response.text()}`);
+    }
+
+    const data = (await response.json()) as {
+      data: { gid: string; name: string; created_at: string; completed: boolean }[];
+    };
+
+    return data.data
+      .filter((t) => !t.completed)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .map((t) => ({ gid: t.gid, name: t.name, created_at: t.created_at }));
+  });
+
+
+
 async function attachPdfToTask(
   taskId: string,
   pdfData: string,
