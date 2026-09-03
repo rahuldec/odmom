@@ -50,7 +50,8 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({
       id: z.string().uuid(),
-      existingTaskId: z.string().optional(),
+      taskId: z.string().min(1),
+      pdfData: z.string(), // base64 encoded PDF
     }).parse(input),
   )
   .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
@@ -58,61 +59,33 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     if (!ASANA_PROJECT_ID) throw new Error("Asana project ID not configured");
 
     const mom = await getMom({ data: { id: data.id } });
-
     if (!mom) throw new Error("MOM not found");
 
-    // Format the task title with DD/MM/YYYY format
-    const meetingDate = new Date(mom.meeting_date);
-    const day = String(meetingDate.getDate()).padStart(2, '0');
-    const month = String(meetingDate.getMonth() + 1).padStart(2, '0');
-    const year = meetingDate.getFullYear();
-    const formattedDate = `${day}/${month}/${year}`;
-    const taskTitle = `${mom.client_name} - ${formattedDate}`;
-
-    // Format the description with MOM details
+    const taskId = data.taskId;
     const description = formatAsanaTaskDescription(mom);
 
-    let taskId: string;
+    // Update task description to append MOM details
+    const updateResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}`, {
+      method: "PUT",
+      headers: getAsanaHeaders(),
+      body: JSON.stringify({
+        data: {
+          notes: description,
+        },
+      }),
+    });
 
-    if (data.existingTaskId) {
-      // Use existing task
-      taskId = data.existingTaskId;
-      console.log("Attaching PDF to existing task:", taskId);
-    } else {
-      // Create new task
-      const endpoint = `${ASANA_API_BASE}/tasks`;
-      console.log("Creating Asana task at:", endpoint);
-      console.log("Task title:", taskTitle);
-
-      const taskResponse = await fetch(endpoint, {
-        method: "POST",
-        headers: getAsanaHeaders(),
-        body: JSON.stringify({
-          data: {
-            name: taskTitle,
-            notes: description,
-            projects: [ASANA_PROJECT_ID],
-          },
-        }),
-      });
-
-      const responseText = await taskResponse.text();
-      console.log("Asana API response status:", taskResponse.status);
-
-      if (!taskResponse.ok) {
-        throw new Error(`Failed to create Asana task (${taskResponse.status}): ${responseText}`);
-      }
-
-      const taskData = JSON.parse(responseText) as { data: { gid: string } };
-      taskId = taskData.data.gid;
+    if (!updateResponse.ok) {
+      throw new Error("Failed to update task description");
     }
 
     // Attach PDF to the task
     try {
-      await attachPdfToAsana(taskId, mom, taskTitle);
+      const pdfBuffer = Buffer.from(data.pdfData, 'base64');
+      await attachPdfToTask(taskId, pdfBuffer, mom.client_name);
     } catch (e) {
       console.error("Failed to attach PDF:", e);
-      // Continue anyway - task was created/found successfully
+      // Continue anyway - task was updated successfully
     }
 
     return {
@@ -121,17 +94,14 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     };
   });
 
-async function attachPdfToAsana(
+async function attachPdfToTask(
   taskId: string,
-  mom: MOM,
-  taskTitle: string,
+  pdfBuffer: Buffer,
+  clientName: string,
 ): Promise<void> {
-  // Generate a simple text-based PDF content
-  const pdfContent = generateSimplePdf(mom, taskTitle);
-
   const formData = new FormData();
-  const blob = new Blob([pdfContent], { type: "application/pdf" });
-  formData.append("file", blob, `MOM_${mom.client_name}.pdf`);
+  const blob = new Blob([pdfBuffer], { type: "application/pdf" });
+  formData.append("file", blob, `MOM_${clientName}.pdf`);
 
   const uploadResponse = await fetch(
     `${ASANA_API_BASE}/tasks/${taskId}/attachments`,
@@ -148,76 +118,6 @@ async function attachPdfToAsana(
     const error = await uploadResponse.text();
     throw new Error(`Failed to attach PDF to Asana task: ${error}`);
   }
-}
-
-function generateSimplePdf(mom: MOM, taskTitle: string): string {
-  // Create a simple PDF-like structure with text content
-  // This is a basic implementation - for production, use a proper PDF library
-  const meetingDate = new Date(mom.meeting_date);
-  const day = String(meetingDate.getDate()).padStart(2, '0');
-  const month = String(meetingDate.getMonth() + 1).padStart(2, '0');
-  const year = meetingDate.getFullYear();
-  const formattedDate = `${day}/${month}/${year}`;
-
-  const content = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>
-endobj
-4 0 obj
-<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>
-endobj
-5 0 obj
-<< /Length 1200 >>
-stream
-BT
-/F1 12 Tf
-50 750 Td
-(MINUTES OF MEETING) Tj
-0 -20 Td
-(${taskTitle}) Tj
-0 -30 Td
-(Date: ${formattedDate}) Tj
-0 -15 Td
-(Recorded by: ${mom.employee_name}) Tj
-0 -15 Td
-(Type: ${mom.meeting_type === "online" ? "Online" : "On-site"}) Tj
-${mom.location ? `0 -15 Td\n(Location: ${mom.location}) Tj\n` : ""}
-0 -30 Td
-(ATTENDEES) Tj
-${mom.attendees.map((a) => `0 -15 Td\n(${a.name} - ${a.designation} (${a.team})) Tj\n`).join("")}
-0 -30 Td
-(DISCUSSION POINTS) Tj
-${mom.discussion_points.map((d) => `0 -15 Td\n([${d.module}] ${d.details.substring(0, 50)}) Tj\n`).join("")}
-0 -30 Td
-(WORK COMPLETED) Tj
-${mom.work_completed.map((w) => `0 -15 Td\n([${w.module}] ${w.task.substring(0, 50)}) Tj\n`).join("")}
-0 -30 Td
-(PENDING POINTS) Tj
-${(mom.pending_points ?? []).map((p) => `0 -15 Td\n([${p.module}] ${p.requirement.substring(0, 50)} - ${p.pending_with}) Tj\n`).join("")}
-ET
-endstream
-endobj
-xref
-0 6
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000214 00000 n
-0000000313 00000 n
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-1563
-%%EOF`;
-
-  return content;
 }
 
 function formatAsanaTaskDescription(mom: MOM): string {

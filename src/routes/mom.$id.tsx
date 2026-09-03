@@ -105,8 +105,8 @@ function DetailPage() {
   };
 
   const handleTaskSelection = async () => {
-    if (!selectedTaskId && todaysTasks.length > 0) {
-      toast.error("Please select a task or choose to create a new one");
+    if (!selectedTaskId) {
+      toast.error("Please select a task");
       return;
     }
 
@@ -114,13 +114,18 @@ function DetailPage() {
     setShowTaskPicker(false);
 
     try {
+      // First, download the PDF
+      await downloadMomPdf(mom!);
+
+      // Then update the task with MOM details
       const result = await upload({
         data: {
           id,
-          existingTaskId: selectedTaskId || undefined,
+          taskId: selectedTaskId,
+          pdfData: "", // PDF already downloaded to user's device
         },
       });
-      toast.success("PDF attached to Asana task!");
+      toast.success("MOM details added to Asana task! PDF has been downloaded.");
       // Open the Asana task in a new tab
       window.open(result.task_url, "_blank");
       setSelectedTaskId("");
@@ -315,9 +320,9 @@ function DetailPage() {
       <Dialog open={showTaskPicker} onOpenChange={setShowTaskPicker}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upload MOM to Asana</DialogTitle>
+            <DialogTitle>Select Asana Task</DialogTitle>
             <DialogDescription>
-              Choose to create a new task or attach to an existing one
+              Choose a task from today to add MOM details
             </DialogDescription>
           </DialogHeader>
 
@@ -325,34 +330,27 @@ function DetailPage() {
             <div className="flex justify-center py-4">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
+          ) : todaysTasks.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground">
+              <p>No tasks found for today</p>
+              <p className="text-sm mt-2">Create a task in Asana first</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <RadioGroup value={selectedTaskId} onValueChange={setSelectedTaskId}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="" id="new-task" />
-                  <Label htmlFor="new-task" className="cursor-pointer font-medium">
-                    Create a new task
-                  </Label>
-                </div>
-
-                {todaysTasks.length > 0 && (
-                  <>
-                    <div className="my-4 border-t" />
-                    <div className="space-y-3">
-                      {todaysTasks.map((task) => (
-                        <div key={task.gid} className="flex items-center space-x-2">
-                          <RadioGroupItem value={task.gid} id={`task-${task.gid}`} />
-                          <Label
-                            htmlFor={`task-${task.gid}`}
-                            className="cursor-pointer flex-1 font-medium"
-                          >
-                            {task.name}
-                          </Label>
-                        </div>
-                      ))}
+                <div className="space-y-3">
+                  {todaysTasks.map((task) => (
+                    <div key={task.gid} className="flex items-center space-x-2">
+                      <RadioGroupItem value={task.gid} id={`task-${task.gid}`} />
+                      <Label
+                        htmlFor={`task-${task.gid}`}
+                        className="cursor-pointer flex-1 font-medium"
+                      >
+                        {task.name}
+                      </Label>
                     </div>
-                  </>
-                )}
+                  ))}
+                </div>
               </RadioGroup>
 
               <div className="flex gap-2 justify-end pt-4">
@@ -363,9 +361,9 @@ function DetailPage() {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleTaskSelection} disabled={uploading}>
+                <Button onClick={handleTaskSelection} disabled={uploading || !selectedTaskId}>
                   {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {uploading ? "Uploading..." : "Upload PDF"}
+                  {uploading ? "Adding..." : "Add to Task"}
                 </Button>
               </div>
             </div>
