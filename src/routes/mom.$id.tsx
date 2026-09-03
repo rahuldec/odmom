@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
 import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
-import { downloadMomPdf } from "@/lib/pdf";
+import { downloadMomPdf, getMomPdfAsBase64 } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
 import logoUrl from "@/logo.png";
@@ -114,18 +114,14 @@ function DetailPage() {
     setShowTaskPicker(false);
 
     try {
-      // First, download the PDF
-      await downloadMomPdf(mom!);
-
-      // Then update the task with MOM details
+      // Update task with MOM details
       const result = await upload({
         data: {
           id,
           taskId: selectedTaskId,
-          pdfData: "", // PDF already downloaded to user's device
         },
       });
-      toast.success("MOM details added to Asana task! PDF has been downloaded.");
+      toast.success("MOM details added to Asana task!");
       // Open the Asana task in a new tab
       window.open(result.task_url, "_blank");
       setSelectedTaskId("");

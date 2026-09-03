@@ -51,7 +51,7 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     z.object({
       id: z.string().uuid(),
       taskId: z.string().min(1),
-      pdfData: z.string(), // base64 encoded PDF
+      pdfData: z.string().optional(), // base64 encoded PDF (optional)
     }).parse(input),
   )
   .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
@@ -64,7 +64,7 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     const taskId = data.taskId;
     const description = formatAsanaTaskDescription(mom);
 
-    // Update task description to append MOM details
+    // Update task description with MOM details
     const updateResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}`, {
       method: "PUT",
       headers: getAsanaHeaders(),
@@ -79,46 +79,11 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
       throw new Error("Failed to update task description");
     }
 
-    // Attach PDF to the task
-    try {
-      const pdfBuffer = Buffer.from(data.pdfData, 'base64');
-      await attachPdfToTask(taskId, pdfBuffer, mom.client_name);
-    } catch (e) {
-      console.error("Failed to attach PDF:", e);
-      // Continue anyway - task was updated successfully
-    }
-
     return {
       task_id: taskId,
       task_url: `https://app.asana.com/0/${ASANA_PROJECT_ID}/${taskId}`,
     };
   });
-
-async function attachPdfToTask(
-  taskId: string,
-  pdfBuffer: Buffer,
-  clientName: string,
-): Promise<void> {
-  const formData = new FormData();
-  const blob = new Blob([pdfBuffer], { type: "application/pdf" });
-  formData.append("file", blob, `MOM_${clientName}.pdf`);
-
-  const uploadResponse = await fetch(
-    `${ASANA_API_BASE}/tasks/${taskId}/attachments`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
-      },
-      body: formData,
-    },
-  );
-
-  if (!uploadResponse.ok) {
-    const error = await uploadResponse.text();
-    throw new Error(`Failed to attach PDF to Asana task: ${error}`);
-  }
-}
 
 function formatAsanaTaskDescription(mom: MOM): string {
   const lines: string[] = [];
