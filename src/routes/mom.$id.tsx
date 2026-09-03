@@ -118,7 +118,12 @@ function DetailPage() {
       let pdfData: string | undefined;
       try {
         const pdfBuffer = await getPdfBuffer(mom);
-        const binaryString = String.fromCharCode(...pdfBuffer);
+        // Process in chunks to avoid JS call stack limit on large PDFs
+        let binaryString = "";
+        const chunk = 8192;
+        for (let i = 0; i < pdfBuffer.length; i += chunk) {
+          binaryString += String.fromCharCode(...pdfBuffer.subarray(i, i + chunk));
+        }
         pdfData = btoa(binaryString);
       } catch (pdfError) {
         console.error("Failed to generate PDF:", pdfError);

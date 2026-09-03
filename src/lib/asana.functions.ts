@@ -4,12 +4,52 @@ import type { MOM } from "./mom-types";
 import { getMom } from "./mom.functions";
 
 const ASANA_API_BASE = "https://app.asana.com/api/1.0";
-const ASANA_OAUTH_TOKEN = process.env.ASANA_OAUTH_TOKEN;
 const ASANA_PROJECT_ID = process.env.ASANA_PROJECT_ID;
+const ASANA_CLIENT_ID = process.env.ASANA_CLIENT_ID;
+const ASANA_CLIENT_SECRET = process.env.ASANA_CLIENT_SECRET;
+const ASANA_REDIRECT_URI = process.env.ASANA_REDIRECT_URI || "http://localhost:8080/auth/asana/callback";
 
-function getAsanaHeaders() {
+// In-memory cache so we don't refresh on every request within the same server process
+let cachedToken: { access_token: string; expires_at: number } | null = null;
+
+async function getValidToken(): Promise<string> {
+  const now = Date.now();
+
+  // Return cached token if still valid (with 60s buffer)
+  if (cachedToken && cachedToken.expires_at - now > 60_000) {
+    return cachedToken.access_token;
+  }
+
+  const refreshToken = process.env.ASANA_REFRESH_TOKEN;
+  if (refreshToken && ASANA_CLIENT_ID && ASANA_CLIENT_SECRET) {
+    // Auto-refresh using refresh token
+    const res = await fetch("https://app.asana.com/-/oauth_token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: ASANA_CLIENT_ID,
+        client_secret: ASANA_CLIENT_SECRET,
+        refresh_token: refreshToken,
+      }),
+    });
+    if (res.ok) {
+      const data = (await res.json()) as { access_token: string; expires_in: number };
+      cachedToken = { access_token: data.access_token, expires_at: now + data.expires_in * 1000 };
+      return cachedToken.access_token;
+    }
+  }
+
+  // Fall back to the static token in .env
+  const staticToken = process.env.ASANA_OAUTH_TOKEN;
+  if (!staticToken) throw new Error("Asana OAuth token not configured");
+  return staticToken;
+}
+
+async function getAsanaHeaders() {
+  const token = await getValidToken();
   return {
-    Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
   };
 }
@@ -19,7 +59,6 @@ export const getTodaysTasks = createServerFn({ method: "GET" })
     z.object({}).parse(input ?? {}),
   )
   .handler(async (): Promise<{ gid: string; name: string }[]> => {
-    if (!ASANA_OAUTH_TOKEN) throw new Error("Asana OAuth token not configured");
     if (!ASANA_PROJECT_ID) throw new Error("Asana project ID not configured");
 
     const today = new Date();
@@ -28,12 +67,7 @@ export const getTodaysTasks = createServerFn({ method: "GET" })
 
     const response = await fetch(
       `${ASANA_API_BASE}/projects/${ASANA_PROJECT_ID}/tasks?opt_fields=gid,name,created_at`,
-      {
-        headers: {
-          Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      },
+      { headers: await getAsanaHeaders() },
     );
 
     if (!response.ok) throw new Error("Failed to fetch Asana tasks");
@@ -57,7 +91,6 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
-    if (!ASANA_OAUTH_TOKEN) throw new Error("Asana OAuth token not configured");
     if (!ASANA_PROJECT_ID) throw new Error("Asana project ID not configured");
 
     const mom = await getMom({ data: { id: data.id } });
@@ -69,7 +102,7 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     // Update task description with MOM details
     const updateResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}`, {
       method: "PUT",
-      headers: getAsanaHeaders(),
+      headers: await getAsanaHeaders(),
       body: JSON.stringify({
         data: {
           notes: description,
@@ -103,10 +136,11 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
           Buffer.from(`\r\n--${boundary}--\r\n`),
         ]);
 
+        const token = await getValidToken();
         const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": `multipart/form-data; boundary=${boundary}`,
           },
           body,
