@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Download, Link2, Loader2, Pencil, Printer, Search, Share2, Upload } from "lucide-react";
+import { ArrowLeft, Download, Link2, Loader2, Pencil, Printer, Search, Share2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Seal } from "@/components/seal";
 import { ModuleChip } from "@/components/chips";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
-import { createMomAsanaTask, uploadMomToAsana, getProjectTasks } from "@/lib/asana.functions";
+import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
@@ -29,9 +29,8 @@ export const Route = createFileRoute("/mom/$id")({
 function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
-  const createTask = useServerFn(createMomAsanaTask);
   const addToTask = useServerFn(uploadMomToAsana);
-  const listTasks = useServerFn(getProjectTasks);
+  const listTasks = useServerFn(getTodaysTasks);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -39,7 +38,7 @@ function DetailPage() {
   const [selectedTaskId, setSelectedTaskId] = useState("");
 
   const { data: projectTasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ["asanaProjectTasks"],
+    queryKey: ["asanaTodaysTasks"],
     queryFn: () => listTasks({}),
     enabled: pickerOpen,
   });
@@ -103,35 +102,6 @@ function DetailPage() {
       setDownloading(false);
     }
   };
-
-  const handleUploadToAsana = async () => {
-    setUploading(true);
-    try {
-      // Generate the same PDF as the download, as base64
-      let pdfData: string | undefined;
-      try {
-        const pdfBuffer = await getPdfBuffer(mom);
-        let binaryString = "";
-        const chunk = 8192;
-        for (let i = 0; i < pdfBuffer.length; i += chunk) {
-          binaryString += String.fromCharCode(...pdfBuffer.subarray(i, i + chunk));
-        }
-        pdfData = btoa(binaryString);
-      } catch (pdfError) {
-        console.error("Failed to generate PDF:", pdfError);
-      }
-
-      const result = await createTask({ data: { id, pdfData } });
-      toast.success("Asana task created with the MOM PDF attached");
-      window.open(result.task_url, "_blank");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to create the Asana task. Try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-
 
   const buildPdfBase64 = async (): Promise<string | undefined> => {
     try {
@@ -207,20 +177,6 @@ function DetailPage() {
               <Download className="h-4 w-4" />
             )}
             Download PDF
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            onClick={() => void handleUploadToAsana()}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            Create Asana task
           </Button>
           <Button
             variant="outline"
@@ -411,9 +367,6 @@ function DetailPage() {
                     <RadioGroupItem value={task.gid} id={`task-${task.gid}`} className="mt-0.5" />
                     <Label htmlFor={`task-${task.gid}`} className="flex-1 cursor-pointer font-medium">
                       {task.name}
-                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                        Created {formatDay(task.created_at)}
-                      </span>
                     </Label>
                   </div>
                 ))}
