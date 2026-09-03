@@ -9,8 +9,11 @@ import { ModuleChip } from "@/components/chips";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
-import { uploadMomToAsana } from "@/lib/asana.functions";
+import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
@@ -26,12 +29,21 @@ function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
   const upload = useServerFn(uploadMomToAsana);
+  const getTasks = useServerFn(getTodaysTasks);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
 
   const { data: mom, isLoading } = useQuery({
     queryKey: ["mom", id],
     queryFn: () => get({ data: { id } }),
+  });
+
+  const { data: todaysTasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ["todaysTasks"],
+    queryFn: () => getTasks({}),
+    enabled: showTaskPicker,
   });
 
   if (isLoading) {
@@ -89,12 +101,29 @@ function DetailPage() {
   };
 
   const handleUploadToAsana = async () => {
+    setShowTaskPicker(true);
+  };
+
+  const handleTaskSelection = async () => {
+    if (!selectedTaskId && todaysTasks.length > 0) {
+      toast.error("Please select a task or choose to create a new one");
+      return;
+    }
+
     setUploading(true);
+    setShowTaskPicker(false);
+
     try {
-      const result = await upload({ data: { id } });
-      toast.success("MOM uploaded to Asana!");
+      const result = await upload({
+        data: {
+          id,
+          existingTaskId: selectedTaskId || undefined,
+        },
+      });
+      toast.success("PDF attached to Asana task!");
       // Open the Asana task in a new tab
       window.open(result.task_url, "_blank");
+      setSelectedTaskId("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to upload to Asana. Try again.");
     } finally {
@@ -282,6 +311,67 @@ function DetailPage() {
           <p className="eyebrow">Recorded by Okie Dokie · MOM Portal</p>
         </div>
       </article>
+
+      <Dialog open={showTaskPicker} onOpenChange={setShowTaskPicker}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload MOM to Asana</DialogTitle>
+            <DialogDescription>
+              Choose to create a new task or attach to an existing one
+            </DialogDescription>
+          </DialogHeader>
+
+          {tasksLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <RadioGroup value={selectedTaskId} onValueChange={setSelectedTaskId}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="" id="new-task" />
+                  <Label htmlFor="new-task" className="cursor-pointer font-medium">
+                    Create a new task
+                  </Label>
+                </div>
+
+                {todaysTasks.length > 0 && (
+                  <>
+                    <div className="my-4 border-t" />
+                    <div className="space-y-3">
+                      {todaysTasks.map((task) => (
+                        <div key={task.gid} className="flex items-center space-x-2">
+                          <RadioGroupItem value={task.gid} id={`task-${task.gid}`} />
+                          <Label
+                            htmlFor={`task-${task.gid}`}
+                            className="cursor-pointer flex-1 font-medium"
+                          >
+                            {task.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </RadioGroup>
+
+              <div className="flex gap-2 justify-end pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTaskPicker(false)}
+                  disabled={uploading}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleTaskSelection} disabled={uploading}>
+                  {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {uploading ? "Uploading..." : "Upload PDF"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
