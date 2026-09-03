@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Download, Link2, Loader2, Pencil, Printer, Search, Share2 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, Pencil, Printer, Search, Share2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Seal } from "@/components/seal";
 import { ModuleChip } from "@/components/chips";
@@ -185,8 +185,22 @@ function DetailPage() {
             onClick={() => setPickerOpen(true)}
             disabled={uploading}
           >
-            <Link2 className="h-4 w-4" />
-            Add to existing task
+            <svg className="h-4 w-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="ag1" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#FFB85F"/>
+                  <stop offset="100%" stopColor="#F06A6A"/>
+                </radialGradient>
+                <radialGradient id="ag2" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#FF9B5E"/>
+                  <stop offset="100%" stopColor="#F06A6A"/>
+                </radialGradient>
+              </defs>
+              <circle cx="50" cy="30" r="20" fill="url(#ag1)"/>
+              <circle cx="22" cy="72" r="20" fill="url(#ag2)"/>
+              <circle cx="78" cy="72" r="20" fill="url(#ag1)"/>
+            </svg>
+            Add to Asana
           </Button>
           <Button
             variant="outline"
@@ -331,7 +345,7 @@ function DetailPage() {
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add to an existing Asana task</DialogTitle>
+            <DialogTitle>Add to Asana</DialogTitle>
             <DialogDescription>
               The MOM details go into the task description and the PDF is attached.
             </DialogDescription>
