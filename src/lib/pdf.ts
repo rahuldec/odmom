@@ -113,7 +113,8 @@ function formatDate(value: string | null | undefined): string {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export async function downloadMomPdf(mom: MOM) {
+// Core PDF generation — used by both download and Asana upload
+async function generateMomPdf(mom: MOM) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -520,119 +521,20 @@ export async function downloadMomPdf(mom: MOM) {
     doc.text(`Page ${i} of ${pages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
+  return doc;
+}
+
+// Download the PDF to user's computer
+export async function downloadMomPdf(mom: MOM) {
+  const doc = await generateMomPdf(mom);
   const safe = mom.client_name.replace(/[^a-z0-9]+/gi, "_");
   doc.save(`MOM_${safe}_${mom.meeting_date}.pdf`);
 }
 
+// Get PDF as Uint8Array for server attachment (Asana upload)
+// Uses the same generateMomPdf as downloadMomPdf for consistency
 export async function getPdfBuffer(mom: MOM): Promise<Uint8Array> {
-  // Generate a simplified PDF for server attachment (browser APIs only)
-  // Photos are omitted to avoid browser-only APIs
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 42;
-  const contentW = pageWidth - margin * 2;
-
-  const INK: [number, number, number] = [42, 22, 19];
-  const MAROON: [number, number, number] = [124, 29, 19];
-  const SLATE: [number, number, number] = [138, 106, 97];
-  const LINE: [number, number, number] = [237, 223, 215];
-  const ROW_TINT: [number, number, number] = [251, 246, 242];
-
-  // Title
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(...INK);
-  doc.text(`MOM: ${mom.client_name}`, margin, margin);
-
-  // Basic info
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(...SLATE);
-  const meetingDate = new Date(mom.meeting_date);
-  const day = String(meetingDate.getDate()).padStart(2, '0');
-  const month = String(meetingDate.getMonth() + 1).padStart(2, '0');
-  const year = meetingDate.getFullYear();
-  doc.text(`Date: ${day}/${month}/${year}`, margin, margin + 20);
-  doc.text(`Recorded by: ${mom.employee_name}`, margin, margin + 35);
-  doc.text(`Type: ${mom.meeting_type === "online" ? "Online" : "On-site"}`, margin, margin + 50);
-  if (mom.location) doc.text(`Location: ${mom.location}`, margin, margin + 65);
-
-  let y = margin + 100;
-
-  // Attendees
-  if (mom.attendees.length > 0) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...MAROON);
-    doc.text("ATTENDEES", margin, y);
-    y += 15;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...INK);
-    mom.attendees.forEach((a) => {
-      doc.text(`• ${a.name} (${a.designation}, ${a.team === "okie_dokie" ? "Okie Dokie" : "Client"})`, margin + 10, y);
-      y += 12;
-    });
-    y += 10;
-  }
-
-  // Discussion Points
-  if (mom.discussion_points.length > 0) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...MAROON);
-    doc.text("DISCUSSION POINTS", margin, y);
-    y += 15;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...INK);
-    mom.discussion_points.forEach((d) => {
-      const lines = doc.splitTextToSize(`[${d.module}] ${d.details}`, contentW - 20);
-      doc.text(lines, margin + 10, y);
-      y += lines.length * 12 + 5;
-    });
-    y += 10;
-  }
-
-  // Work Completed
-  if (mom.work_completed.length > 0) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...MAROON);
-    doc.text("WORK COMPLETED", margin, y);
-    y += 15;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...INK);
-    mom.work_completed.forEach((w) => {
-      const lines = doc.splitTextToSize(`[${w.module}] ${w.task}`, contentW - 20);
-      doc.text(lines, margin + 10, y);
-      y += lines.length * 12 + 5;
-    });
-    y += 10;
-  }
-
-  // Pending Points
-  if ((mom.pending_points ?? []).length > 0) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...MAROON);
-    doc.text("PENDING POINTS", margin, y);
-    y += 15;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...INK);
-    (mom.pending_points ?? []).forEach((p) => {
-      const lines = doc.splitTextToSize(
-        `[${p.module}] ${p.requirement} (Pending with: ${p.pending_with === "okie_dokie" ? "Okie Dokie" : "Client"})`,
-        contentW - 20
-      );
-      doc.text(lines, margin + 10, y);
-      y += lines.length * 12 + 5;
-    });
-  }
-
+  const doc = await generateMomPdf(mom);
   const pdfArrayBuffer = doc.output("arraybuffer");
   return new Uint8Array(pdfArrayBuffer);
 }
