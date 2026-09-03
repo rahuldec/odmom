@@ -547,13 +547,15 @@ function RowActions({
   return (
     <div className="flex items-center justify-end gap-0.5">
       <Button
-        size="icon"
         variant="ghost"
+        size="sm"
         onClick={onAsana}
+        className="gap-1.5 text-xs"
         aria-label="Add to Asana"
         title="Add to Asana"
       >
         <AsanaIcon />
+        Add to Asana
       </Button>
       <Button
         size="icon"
