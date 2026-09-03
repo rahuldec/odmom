@@ -28,10 +28,13 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { getMom, listMoms } from "@/lib/mom.functions";
+import { getTodaysTasks, uploadMomToAsana } from "@/lib/asana.functions";
 import type { MOM, MomPhoto } from "@/lib/mom-types";
-import { downloadMomPdf } from "@/lib/pdf";
+import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural, relativeDay } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -64,9 +67,21 @@ function ListPage() {
   const router = useRouter();
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
+  const listTasks = useServerFn(getTodaysTasks);
+  const addToTask = useServerFn(uploadMomToAsana);
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [gallery, setGallery] = useState<{ title: string; photos: MomPhoto[] } | null>(null);
+  const [asanaPickerMomId, setAsanaPickerMomId] = useState<string | null>(null);
+  const [asanaTaskQuery, setAsanaTaskQuery] = useState("");
+  const [asanaSelectedTaskId, setAsanaSelectedTaskId] = useState("");
+  const [asanaUploading, setAsanaUploading] = useState(false);
+
+  const { data: asanaTasks = [], isLoading: asanaTasksLoading } = useQuery({
+    queryKey: ["asanaTodaysTasks"],
+    queryFn: () => listTasks({}),
+    enabled: !!asanaPickerMomId,
+  });
 
   const [search, setSearch] = useState("");
   const [client, setClient] = useState("");
@@ -118,6 +133,41 @@ function ListPage() {
     setClient("");
     setEmployee("");
     setType("all");
+  };
+
+  const handleAddToAsana = async () => {
+    if (!asanaSelectedTaskId || !asanaPickerMomId) return;
+    const momId = asanaPickerMomId;
+    setAsanaUploading(true);
+    setAsanaPickerMomId(null);
+    try {
+      const mom = await get({ data: { id: momId } });
+      if (!mom) throw new Error("MOM not found");
+      let pdfData: string | undefined;
+      try {
+        const buf = await getPdfBuffer(mom);
+        let s = "";
+        for (let i = 0; i < buf.length; i += 8192)
+          s += String.fromCharCode(...buf.subarray(i, i + 8192));
+        pdfData = btoa(s);
+      } catch { /* skip PDF on error */ }
+      const result = await addToTask({
+        data: {
+          id: momId,
+          taskId: asanaSelectedTaskId,
+          pdfData,
+          clientName: mom.client_name,
+          meetingDate: mom.meeting_date.slice(0, 10),
+        },
+      });
+      toast.success("MOM details and PDF added to the Asana task");
+      window.open(result.task_url, "_blank");
+      setAsanaSelectedTaskId("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update the Asana task. Try again.");
+    } finally {
+      setAsanaUploading(false);
+    }
   };
 
   const handleDownload = async (id: string) => {
@@ -310,6 +360,7 @@ function ListPage() {
                         id={m.id}
                         downloading={downloadingId === m.id}
                         onDownload={() => void handleDownload(m.id)}
+                        onAsana={() => setAsanaPickerMomId(m.id)}
                       />
                     </td>
                   </tr>
@@ -354,6 +405,7 @@ function ListPage() {
                     id={m.id}
                     downloading={downloadingId === m.id}
                     onDownload={() => void handleDownload(m.id)}
+                    onAsana={() => setAsanaPickerMomId(m.id)}
                   />
                 </div>
               </Card>
@@ -361,6 +413,65 @@ function ListPage() {
           </div>
         </>
       )}
+
+      {/* Asana task picker */}
+      <AsanaDefs />
+      <Dialog open={!!asanaPickerMomId} onOpenChange={(o) => !o && setAsanaPickerMomId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add to Asana</DialogTitle>
+            <DialogDescription>
+              The MOM details go into the task description and the PDF is attached.
+            </DialogDescription>
+          </DialogHeader>
+          {asanaTasksLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : asanaTasks.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No tasks created today in the Asana project.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={asanaTaskQuery}
+                  onChange={(e) => setAsanaTaskQuery(e.target.value)}
+                  placeholder="Search tasks"
+                  className="pl-9"
+                />
+              </div>
+              <RadioGroup
+                value={asanaSelectedTaskId}
+                onValueChange={setAsanaSelectedTaskId}
+                className="max-h-72 space-y-2 overflow-y-auto pr-1"
+              >
+                {asanaTasks
+                  .filter((t) => t.name.toLowerCase().includes(asanaTaskQuery.trim().toLowerCase()))
+                  .map((task) => (
+                    <div key={task.gid} className="flex items-start gap-2 rounded-md border p-2.5">
+                      <RadioGroupItem value={task.gid} id={`task-${task.gid}`} className="mt-0.5" />
+                      <Label htmlFor={`task-${task.gid}`} className="flex-1 cursor-pointer font-medium">
+                        {task.name}
+                      </Label>
+                    </div>
+                  ))}
+              </RadioGroup>
+              <div className="flex justify-end gap-2 pt-1">
+                <Button variant="outline" onClick={() => setAsanaPickerMomId(null)} disabled={asanaUploading}>
+                  Cancel
+                </Button>
+                <Button onClick={() => void handleAddToAsana()} disabled={asanaUploading || !asanaSelectedTaskId}>
+                  {asanaUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Add to task
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Photo gallery */}
       <Dialog open={!!gallery} onOpenChange={(o) => !o && setGallery(null)}>
@@ -395,17 +506,55 @@ function ListPage() {
   );
 }
 
+function AsanaDefs() {
+  return (
+    <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
+      <defs>
+        <radialGradient id="asana-g1" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFB85F" />
+          <stop offset="100%" stopColor="#F06A6A" />
+        </radialGradient>
+        <radialGradient id="asana-g2" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FF9B5E" />
+          <stop offset="100%" stopColor="#F06A6A" />
+        </radialGradient>
+      </defs>
+    </svg>
+  );
+}
+
+function AsanaIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="30" r="20" fill="url(#asana-g1)" />
+      <circle cx="22" cy="72" r="20" fill="url(#asana-g2)" />
+      <circle cx="78" cy="72" r="20" fill="url(#asana-g1)" />
+    </svg>
+  );
+}
+
 function RowActions({
   id,
   downloading,
   onDownload,
+  onAsana,
 }: {
   id: string;
   downloading: boolean;
   onDownload: () => void;
+  onAsana: () => void;
 }) {
   return (
     <div className="flex items-center justify-end gap-0.5">
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={onAsana}
+        aria-label="Add to Asana"
+        title="Add to Asana"
+      >
+        <AsanaIcon />
+      </Button>
       <Button
         size="icon"
         variant="ghost"

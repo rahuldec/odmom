@@ -187,18 +187,18 @@ function DetailPage() {
           >
             <svg className="h-4 w-4" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <radialGradient id="ag1" cx="50%" cy="50%" r="50%">
+                <radialGradient id="asana-g1" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stopColor="#FFB85F"/>
                   <stop offset="100%" stopColor="#F06A6A"/>
                 </radialGradient>
-                <radialGradient id="ag2" cx="50%" cy="50%" r="50%">
+                <radialGradient id="asana-g2" cx="50%" cy="50%" r="50%">
                   <stop offset="0%" stopColor="#FF9B5E"/>
                   <stop offset="100%" stopColor="#F06A6A"/>
                 </radialGradient>
               </defs>
-              <circle cx="50" cy="30" r="20" fill="url(#ag1)"/>
-              <circle cx="22" cy="72" r="20" fill="url(#ag2)"/>
-              <circle cx="78" cy="72" r="20" fill="url(#ag1)"/>
+              <circle cx="50" cy="30" r="20" fill="url(#asana-g1)"/>
+              <circle cx="22" cy="72" r="20" fill="url(#asana-g2)"/>
+              <circle cx="78" cy="72" r="20" fill="url(#asana-g1)"/>
             </svg>
             Add to Asana
           </Button>
