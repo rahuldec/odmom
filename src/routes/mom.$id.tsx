@@ -9,11 +9,8 @@ import { ModuleChip } from "@/components/chips";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
-import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
+import { createMomAsanaTask } from "@/lib/asana.functions";
 import type { Attendee, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
@@ -28,23 +25,15 @@ export const Route = createFileRoute("/mom/$id")({
 function DetailPage() {
   const { id } = Route.useParams();
   const get = useServerFn(getMom);
-  const upload = useServerFn(uploadMomToAsana);
-  const getTasks = useServerFn(getTodaysTasks);
+  const createTask = useServerFn(createMomAsanaTask);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [showTaskPicker, setShowTaskPicker] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
 
   const { data: mom, isLoading } = useQuery({
     queryKey: ["mom", id],
     queryFn: () => get({ data: { id } }),
   });
 
-  const { data: todaysTasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ["todaysTasks"],
-    queryFn: () => getTasks({}),
-    enabled: showTaskPicker,
-  });
 
   if (isLoading) {
     return (
@@ -168,7 +157,7 @@ function DetailPage() {
             ) : (
               <Upload className="h-4 w-4" />
             )}
-            Upload to Asana
+            Create Asana task
           </Button>
           <Button
             variant="outline"
@@ -309,59 +298,6 @@ function DetailPage() {
         </div>
       </article>
 
-      <Dialog open={showTaskPicker} onOpenChange={setShowTaskPicker}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select Asana Task</DialogTitle>
-            <DialogDescription>
-              Choose a task from today to add MOM details
-            </DialogDescription>
-          </DialogHeader>
-
-          {tasksLoading ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : todaysTasks.length === 0 ? (
-            <div className="py-6 text-center text-muted-foreground">
-              <p>No tasks found for today</p>
-              <p className="text-sm mt-2">Create a task in Asana first</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <RadioGroup value={selectedTaskId} onValueChange={setSelectedTaskId}>
-                <div className="space-y-3">
-                  {todaysTasks.map((task) => (
-                    <div key={task.gid} className="flex items-center space-x-2">
-                      <RadioGroupItem value={task.gid} id={`task-${task.gid}`} />
-                      <Label
-                        htmlFor={`task-${task.gid}`}
-                        className="cursor-pointer flex-1 font-medium"
-                      >
-                        {task.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </RadioGroup>
-
-              <div className="flex gap-2 justify-end pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowTaskPicker(false)}
-                  disabled={uploading}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleTaskSelection} disabled={uploading || !selectedTaskId}>
-                  {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {uploading ? "Adding..." : "Add to Task"}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </AppShell>
   );
 }
