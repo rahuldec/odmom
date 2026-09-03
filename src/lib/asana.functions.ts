@@ -84,28 +84,39 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     // Attach PDF if provided
     if (data.pdfData) {
       try {
+        const boundary = `----FormBoundary${Date.now()}`;
         const buffer = Buffer.from(data.pdfData, "base64");
-        const formData = new FormData();
         const safe = data.clientName.replace(/[^a-z0-9]+/gi, "_");
+        const filename = `MOM_${safe}_${data.meetingDate}.pdf`;
 
-        // Create a Blob-like object for FormData
-        const file = new File([buffer], `MOM_${safe}_${data.meetingDate}.pdf`, { type: "application/pdf" });
-        formData.append("file", file);
+        // Manually construct multipart/form-data
+        const parts = [
+          `--${boundary}`,
+          `Content-Disposition: form-data; name="file"; filename="${filename}"`,
+          `Content-Type: application/pdf`,
+          ``,
+        ];
+
+        const body = Buffer.concat([
+          Buffer.from(parts.join("\r\n") + "\r\n"),
+          buffer,
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]);
 
         const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${ASANA_OAUTH_TOKEN}`,
+            "Content-Type": `multipart/form-data; boundary=${boundary}`,
           },
-          body: formData,
+          body,
         });
 
         if (!attachResponse.ok) {
-          const attachError = await attachResponse.text();
-          console.error("Failed to attach PDF to Asana task:", attachResponse.status, attachError);
+          console.error(`PDF attach failed: ${attachResponse.status}`);
         }
       } catch (error) {
-        console.error("Error attaching PDF:", error);
+        console.error("Error attaching PDF:", String(error));
       }
     }
 
