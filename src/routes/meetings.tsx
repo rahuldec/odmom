@@ -73,6 +73,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 function ListPage() {
   const router = useRouter();
+  const searchParams = Route.useSearch();
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
   const listTasks = useServerFn(getTodaysTasks);
@@ -94,13 +95,15 @@ function ListPage() {
   const [search, setSearch] = useState("");
   const [client, setClient] = useState("");
   const [employee, setEmployee] = useState("");
+  const [attendee, setAttendee] = useState(searchParams.attendee ?? "");
   const [type, setType] = useState<"all" | "online" | "offline">("all");
   const [sort, setSort] = useState<SortKey>("date_desc");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(Boolean(searchParams.attendee));
 
   const debouncedSearch = useDebounced(search);
   const debouncedClient = useDebounced(client);
   const debouncedEmployee = useDebounced(employee);
+  const debouncedAttendee = useDebounced(attendee);
 
   const filters = useMemo(
     () => ({
