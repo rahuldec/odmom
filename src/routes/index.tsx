@@ -42,6 +42,11 @@ export const Route = createFileRoute("/")({
 
 function DashboardPage() {
   const list = useServerFn(listMoms);
+  const router = useRouter();
+  const handleAttendeeClick = useCallback(
+    (name: string) => router.navigate({ to: "/meetings", search: { attendee: name } }),
+    [router],
+  );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
