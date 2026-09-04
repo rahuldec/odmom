@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { ModuleChip } from "@/components/chips";
+import { EmployeePicker } from "@/components/employee-picker";
+
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -412,14 +414,14 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                 aria-invalid={!!errors.client_name}
               />
             </Field>
-            <Field label="Okie Dokie attendee" required error={errors.employee_name}>
-              <Input
+            <Field label="Okie Dokie attendees" required error={errors.employee_name}>
+              <EmployeePicker
                 value={form.employee_name}
-                onChange={(e) => update("employee_name", e.target.value)}
-                placeholder="Your name"
-                aria-invalid={!!errors.employee_name}
+                onChange={(v) => update("employee_name", v)}
+                invalid={!!errors.employee_name}
               />
             </Field>
+
             <Field label="Meeting date" required error={errors.meeting_date}>
               <Input
                 type="date"
