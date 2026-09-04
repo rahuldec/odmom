@@ -40,6 +40,12 @@ import { formatDay, plural, relativeDay } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/meetings")({
+  validateSearch: (input) =>
+    z
+      .object({
+        attendee: z.string().optional(),
+      })
+      .parse(input),
   head: () => ({
     meta: [
       { title: "All meetings — MOM Portal" },
