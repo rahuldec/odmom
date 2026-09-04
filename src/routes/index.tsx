@@ -306,6 +306,39 @@ function LegendKey({ color, label }: { color: string; label: string }) {
   );
 }
 
+type TickProps = {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+  textAnchor?: string;
+  fill?: string;
+};
+
+function AttendeeTick({
+  x,
+  y,
+  payload,
+  textAnchor,
+  fill,
+  onClick,
+}: TickProps & { onClick: (name: string) => void }) {
+  const name = payload?.value;
+  if (!name) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={textAnchor}
+      fill={fill}
+      fontSize={12}
+      className="cursor-pointer hover:opacity-80"
+      onClick={() => onClick(name)}
+    >
+      {name}
+    </text>
+  );
+}
+
 /** The bar only carries the on-site/online split; the rest of a person's
  *  numbers live here so the chart itself stays readable. */
 function VisitTooltip({
@@ -340,6 +373,7 @@ function VisitTooltip({
       {t.lastVisit && (
         <p className="mt-0.5 text-muted-foreground">Last {relativeDay(t.lastVisit)}</p>
       )}
+      <p className="mt-1.5 text-[10px] font-medium text-primary">Click name to see meetings</p>
     </div>
   );
 }
