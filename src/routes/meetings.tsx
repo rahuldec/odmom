@@ -37,6 +37,7 @@ import { getTodaysTasks, uploadMomToAsana } from "@/lib/asana.functions";
 import type { MOM, MomPhoto } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural, relativeDay } from "@/lib/format";
+import { nameKey } from "@/lib/people";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/meetings")({
