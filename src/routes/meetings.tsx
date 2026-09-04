@@ -1,7 +1,8 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import {
   ArrowUpDown,
   Clock3,
@@ -36,9 +37,16 @@ import { getTodaysTasks, uploadMomToAsana } from "@/lib/asana.functions";
 import type { MOM, MomPhoto } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural, relativeDay } from "@/lib/format";
+import { nameKey } from "@/lib/people";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/meetings")({
+  validateSearch: (input) =>
+    z
+      .object({
+        attendee: z.string().optional(),
+      })
+      .parse(input),
   head: () => ({
     meta: [
       { title: "All meetings — MOM Portal" },
@@ -65,6 +73,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 function ListPage() {
   const router = useRouter();
+  const searchParams = Route.useSearch();
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
   const listTasks = useServerFn(getTodaysTasks);
@@ -86,13 +95,15 @@ function ListPage() {
   const [search, setSearch] = useState("");
   const [client, setClient] = useState("");
   const [employee, setEmployee] = useState("");
+  const [attendee, setAttendee] = useState(searchParams.attendee ?? "");
   const [type, setType] = useState<"all" | "online" | "offline">("all");
   const [sort, setSort] = useState<SortKey>("date_desc");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(Boolean(searchParams.attendee));
 
   const debouncedSearch = useDebounced(search);
   const debouncedClient = useDebounced(client);
   const debouncedEmployee = useDebounced(employee);
+  const debouncedAttendee = useDebounced(attendee);
 
   const filters = useMemo(
     () => ({

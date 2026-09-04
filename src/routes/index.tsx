@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
 import {
   Bar,
@@ -42,6 +42,11 @@ export const Route = createFileRoute("/")({
 
 function DashboardPage() {
   const list = useServerFn(listMoms);
+  const router = useRouter();
+  const handleAttendeeClick = useCallback(
+    (name: string) => router.navigate({ to: "/meetings", search: { attendee: name } }),
+    [router],
+  );
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -178,7 +183,7 @@ function DashboardPage() {
                             width={132}
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fontSize: 12, fill: "var(--color-foreground)" }}
+                            tick={<AttendeeTick onClick={handleAttendeeClick} />}
                           />
                           <Tooltip
                             cursor={{ fill: "var(--color-muted)" }}
@@ -301,6 +306,39 @@ function LegendKey({ color, label }: { color: string; label: string }) {
   );
 }
 
+type TickProps = {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+  textAnchor?: string;
+  fill?: string;
+};
+
+function AttendeeTick({
+  x,
+  y,
+  payload,
+  textAnchor,
+  fill,
+  onClick,
+}: TickProps & { onClick: (name: string) => void }) {
+  const name = payload?.value;
+  if (!name) return null;
+  return (
+    <text
+      x={x}
+      y={y}
+      textAnchor={textAnchor}
+      fill={fill}
+      fontSize={12}
+      className="cursor-pointer hover:opacity-80"
+      onClick={() => onClick(name)}
+    >
+      {name}
+    </text>
+  );
+}
+
 /** The bar only carries the on-site/online split; the rest of a person's
  *  numbers live here so the chart itself stays readable. */
 function VisitTooltip({
@@ -335,6 +373,7 @@ function VisitTooltip({
       {t.lastVisit && (
         <p className="mt-0.5 text-muted-foreground">Last {relativeDay(t.lastVisit)}</p>
       )}
+      <p className="mt-1.5 text-[10px] font-medium text-primary">Click name to see meetings</p>
     </div>
   );
 }
