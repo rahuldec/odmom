@@ -183,7 +183,7 @@ function DashboardPage() {
                             width={132}
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fontSize: 12, fill: "var(--color-foreground)" }}
+                            tick={<AttendeeTick onClick={handleAttendeeClick} />}
                           />
                           <Tooltip
                             cursor={{ fill: "var(--color-muted)" }}
