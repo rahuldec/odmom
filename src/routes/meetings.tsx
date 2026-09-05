@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter, useSearch } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -73,6 +73,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 function ListPage() {
   const router = useRouter();
+  const navigate = useNavigate({ from: "/meetings" });
   const searchParams = Route.useSearch();
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
@@ -110,13 +111,14 @@ function ListPage() {
       search: debouncedSearch || undefined,
       client: debouncedClient || undefined,
       employee: debouncedEmployee || undefined,
+      attendee: debouncedAttendee || undefined,
       meeting_type: type === "all" ? undefined : type,
     }),
-    [debouncedSearch, debouncedClient, debouncedEmployee, type],
+    [debouncedSearch, debouncedClient, debouncedEmployee, debouncedAttendee, type],
   );
 
   const hasFilters = Boolean(
-    debouncedSearch || debouncedClient || debouncedEmployee || type !== "all",
+    debouncedSearch || debouncedClient || debouncedEmployee || debouncedAttendee || type !== "all",
   );
 
   const { data, isLoading } = useQuery({
@@ -143,7 +145,9 @@ function ListPage() {
     setSearch("");
     setClient("");
     setEmployee("");
+    setAttendee("");
     setType("all");
+    navigate({ to: "/meetings", search: {} });
   };
 
   const handleAddToAsana = async () => {
@@ -244,7 +248,7 @@ function ListPage() {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-2">
             <Input
               placeholder="Client name"
               value={client}
@@ -256,6 +260,12 @@ function ListPage() {
               value={employee}
               onChange={(e) => setEmployee(e.target.value)}
               aria-label="Filter by employee"
+            />
+            <Input
+              placeholder="Attendee name"
+              value={attendee}
+              onChange={(e) => setAttendee(e.target.value)}
+              aria-label="Filter by attendee"
             />
             <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
               <SelectTrigger aria-label="Filter by meeting type">
