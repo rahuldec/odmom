@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { MOM, MOMInput } from "./mom-types";
+import { nameKey, splitNames } from "./people";
 
 function getSupa() {
   return createClient<Database>(
