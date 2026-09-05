@@ -64,6 +64,18 @@ const momInputSchema = z.object({
 });
 
 
+function momHasAttendee(mom: MOM, attendee: string): boolean {
+  const target = nameKey(attendee);
+  if (!target) return true;
+  for (const name of splitNames(mom.employee_name)) {
+    if (nameKey(name) === target) return true;
+  }
+  for (const a of mom.attendees ?? []) {
+    if (a.team === "okie_dokie" && nameKey(a.name) === target) return true;
+  }
+  return false;
+}
+
 export const listMoms = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) =>
     z
@@ -71,6 +83,7 @@ export const listMoms = createServerFn({ method: "GET" })
         search: z.string().optional(),
         client: z.string().optional(),
         employee: z.string().optional(),
+        attendee: z.string().optional(),
         meeting_type: z.enum(["online", "offline"]).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
@@ -96,7 +109,11 @@ export const listMoms = createServerFn({ method: "GET" })
     }
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return (rows ?? []) as unknown as MOM[];
+    let result = (rows ?? []) as unknown as MOM[];
+    if (data.attendee) {
+      result = result.filter((m) => momHasAttendee(m, data.attendee));
+    }
+    return result;
   });
 
 export const countMoms = createServerFn({ method: "GET" })
