@@ -111,13 +111,14 @@ function ListPage() {
       search: debouncedSearch || undefined,
       client: debouncedClient || undefined,
       employee: debouncedEmployee || undefined,
+      attendee: debouncedAttendee || undefined,
       meeting_type: type === "all" ? undefined : type,
     }),
-    [debouncedSearch, debouncedClient, debouncedEmployee, type],
+    [debouncedSearch, debouncedClient, debouncedEmployee, debouncedAttendee, type],
   );
 
   const hasFilters = Boolean(
-    debouncedSearch || debouncedClient || debouncedEmployee || type !== "all",
+    debouncedSearch || debouncedClient || debouncedEmployee || debouncedAttendee || type !== "all",
   );
 
   const { data, isLoading } = useQuery({
