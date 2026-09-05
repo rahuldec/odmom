@@ -145,7 +145,9 @@ function ListPage() {
     setSearch("");
     setClient("");
     setEmployee("");
+    setAttendee("");
     setType("all");
+    navigate({ to: "/meetings", search: {} });
   };
 
   const handleAddToAsana = async () => {
