@@ -73,6 +73,7 @@ function useDebounced<T>(value: T, delay = 300): T {
 
 function ListPage() {
   const router = useRouter();
+  const navigate = useNavigate({ from: "/meetings" });
   const searchParams = Route.useSearch();
   const list = useServerFn(listMoms);
   const get = useServerFn(getMom);
