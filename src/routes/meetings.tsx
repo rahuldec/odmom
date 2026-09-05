@@ -248,7 +248,7 @@ function ListPage() {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-card p-3 sm:grid-cols-2">
             <Input
               placeholder="Client name"
               value={client}
@@ -260,6 +260,12 @@ function ListPage() {
               value={employee}
               onChange={(e) => setEmployee(e.target.value)}
               aria-label="Filter by employee"
+            />
+            <Input
+              placeholder="Attendee name"
+              value={attendee}
+              onChange={(e) => setAttendee(e.target.value)}
+              aria-label="Filter by attendee"
             />
             <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
               <SelectTrigger aria-label="Filter by meeting type">
