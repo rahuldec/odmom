@@ -110,8 +110,9 @@ export const listMoms = createServerFn({ method: "GET" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     let result = (rows ?? []) as unknown as MOM[];
-    if (data.attendee) {
-      result = result.filter((m) => momHasAttendee(m, data.attendee));
+    const attendee = data.attendee;
+    if (attendee) {
+      result = result.filter((m) => momHasAttendee(m, attendee));
     }
     return result;
   });
