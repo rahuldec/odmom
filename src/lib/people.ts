@@ -1,4 +1,5 @@
 import type { MOM } from "./mom-types";
+import { TEAM_MEMBERS } from "./employees";
 
 /**
  * Who from Okie Dokie was on a visit, and how many visits each person has.
