@@ -65,13 +65,16 @@ const momInputSchema = z.object({
 
 
 function momHasAttendee(mom: MOM, attendee: string): boolean {
-  const target = nameKey(attendee);
+  const target = nameKey(canonicalName(attendee));
   if (!target) return true;
   for (const name of splitNames(mom.employee_name)) {
-    if (nameKey(name) === target) return true;
+    if (nameKey(canonicalName(name)) === target) return true;
   }
   for (const a of mom.attendees ?? []) {
-    if (a.team === "okie_dokie" && nameKey(a.name) === target) return true;
+    if (a.team !== "okie_dokie") continue;
+    for (const name of splitNames(a.name)) {
+      if (nameKey(canonicalName(name)) === target) return true;
+    }
   }
   return false;
 }
