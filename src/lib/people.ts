@@ -42,6 +42,46 @@ export function splitNames(raw: string | null | undefined): string[] {
     .filter((n) => n.length > 1);
 }
 
+// --- Canonical names: merge old spellings into the current roster ----------
+
+/** Known misspellings / old forms that don't match by first name. */
+const NAME_ALIASES: Record<string, string> = {
+  "vishwas sehra": "Vishvas Sehra",
+  vishwas: "Vishvas Sehra",
+  "gobind sir": "Gobind Monga",
+  "sukhmeet sir": "Sukhmeet Singh",
+  "ankush sir": "Ankush Rana",
+};
+
+const ROSTER_BY_KEY = new Map(TEAM_MEMBERS.map((m) => [nameKey(m.name), m.name]));
+const ROSTER_BY_FIRST = new Map<string, string[]>();
+for (const m of TEAM_MEMBERS) {
+  const first = nameKey(m.name).split(" ")[0];
+  if (!first) continue;
+  const list = ROSTER_BY_FIRST.get(first) ?? [];
+  list.push(m.name);
+  ROSTER_BY_FIRST.set(first, list);
+}
+
+/**
+ * Map a recorded name to its canonical roster spelling when we can.
+ * Exact normalized match wins; otherwise a unique first-name match;
+ * otherwise the name is returned tidied but unchanged.
+ */
+export function canonicalName(raw: string): string {
+  const cleaned = tidy(raw);
+  const key = nameKey(cleaned);
+  if (!key) return cleaned;
+  const alias = NAME_ALIASES[key];
+  if (alias) return alias;
+  const exact = ROSTER_BY_KEY.get(key);
+  if (exact) return exact;
+  const first = key.split(" ")[0];
+  const candidates = ROSTER_BY_FIRST.get(first);
+  if (candidates && candidates.length === 1) return candidates[0];
+  return cleaned;
+}
+
 /** Every Okie Dokie person on this MOM, de-duplicated within the visit. */
 export function momTeamMembers(mom: MOM): string[] {
   const seen = new Map<string, string>();
