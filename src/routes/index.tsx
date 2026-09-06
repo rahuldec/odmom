@@ -310,7 +310,7 @@ type TickProps = {
   x?: number;
   y?: number;
   payload?: { value?: string };
-  textAnchor?: string;
+  textAnchor?: "end" | "inherit" | "middle" | "start";
   fill?: string;
 };
 

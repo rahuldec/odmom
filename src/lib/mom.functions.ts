@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import type { MOM, MOMInput } from "./mom-types";
-import { nameKey, splitNames } from "./people";
+import { canonicalName, nameKey, splitNames } from "./people";
 
 function getSupa() {
   return createClient<Database>(
@@ -65,13 +65,16 @@ const momInputSchema = z.object({
 
 
 function momHasAttendee(mom: MOM, attendee: string): boolean {
-  const target = nameKey(attendee);
+  const target = nameKey(canonicalName(attendee));
   if (!target) return true;
   for (const name of splitNames(mom.employee_name)) {
-    if (nameKey(name) === target) return true;
+    if (nameKey(canonicalName(name)) === target) return true;
   }
   for (const a of mom.attendees ?? []) {
-    if (a.team === "okie_dokie" && nameKey(a.name) === target) return true;
+    if (a.team !== "okie_dokie") continue;
+    for (const name of splitNames(a.name)) {
+      if (nameKey(canonicalName(name)) === target) return true;
+    }
   }
   return false;
 }
@@ -110,8 +113,9 @@ export const listMoms = createServerFn({ method: "GET" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     let result = (rows ?? []) as unknown as MOM[];
-    if (data.attendee) {
-      result = result.filter((m) => momHasAttendee(m, data.attendee));
+    const attendee = data.attendee;
+    if (attendee) {
+      result = result.filter((m) => momHasAttendee(m, attendee));
     }
     return result;
   });
