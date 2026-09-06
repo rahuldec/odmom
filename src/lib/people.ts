@@ -87,8 +87,9 @@ export function momTeamMembers(mom: MOM): string[] {
   const seen = new Map<string, string>();
   const add = (raw: string | null | undefined) => {
     for (const name of splitNames(raw)) {
-      const key = nameKey(name);
-      if (key && !seen.has(key)) seen.set(key, name);
+      const canonical = canonicalName(name);
+      const key = nameKey(canonical);
+      if (key && !seen.has(key)) seen.set(key, canonical);
     }
   };
 
