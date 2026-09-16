@@ -63,23 +63,58 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
 
     const safe = mom.client_name.replace(/[^a-z0-9]+/gi, "_");
 
+    const mimeOf = (filename: string): string => {
+      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+      const map: Record<string, string> = {
+        pdf: "application/pdf",
+        doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ppt: "application/vnd.ms-powerpoint",
+        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        png: "image/png",
+        jpg: "image/jpeg",
+        jpeg: "image/jpeg",
+        gif: "image/gif",
+        zip: "application/zip",
+        txt: "text/plain",
+        csv: "text/csv",
+      };
+      return map[ext] ?? "application/octet-stream";
+    };
+
+    const attachments: Array<{ name: string; content: string; mime_type: string }> = [];
+
+    if (data.pdfData) {
+      attachments.push({
+        name: `MOM_${safe}_${mom.meeting_date.slice(0, 10)}.pdf`,
+        content: data.pdfData,
+        mime_type: "application/pdf",
+      });
+    }
+
+    for (const doc of handoverDocs) {
+      try {
+        const res = await fetch(doc.url);
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        const b64 = Buffer.from(buf).toString("base64");
+        const name = doc.caption ?? "document";
+        attachments.push({ name, content: b64, mime_type: mimeOf(name) });
+      } catch {
+        // skip if a doc can't be fetched
+      }
+    }
+
     const body: Record<string, unknown> = {
       from: { address: fromAddress, name: fromName },
       to: data.to.map((address) => ({ email_address: { address } })),
       ...(data.cc?.length ? { cc: data.cc.map((address) => ({ email_address: { address } })) } : {}),
       subject,
       htmlbody,
+      ...(attachments.length ? { attachments } : {}),
     };
-
-    if (data.pdfData) {
-      body.attachments = [
-        {
-          name: `MOM_${safe}_${mom.meeting_date.slice(0, 10)}.pdf`,
-          content: data.pdfData,
-          mime_type: "application/pdf",
-        },
-      ];
-    }
 
     const res = await fetch(zeptoUrl, {
       method: "POST",
