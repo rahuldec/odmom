@@ -367,8 +367,8 @@ function ListPage() {
       ) : (
         <>
           {/* Desktop */}
-          <Card className="hidden overflow-hidden md:block">
-            <table className="w-full text-sm">
+          <Card className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px] text-sm">
               <thead className="border-b border-border bg-muted/60">
                 <tr className="eyebrow">
                   <th className="px-5 py-3 text-left font-medium">Client</th>
@@ -377,7 +377,7 @@ function ListPage() {
                   <th className="px-5 py-3 text-left font-medium">Employee</th>
                   <th className="px-5 py-3 text-left font-medium">Pending</th>
                   <th className="px-5 py-3 text-left font-medium">Photos</th>
-                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                  <th className="w-[280px] px-5 py-3 text-right font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
