@@ -103,13 +103,16 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
   <a href="https://www.okiedokiepay.com">okiedokiepay.com</a>
 </div>`;
 
+    const LOGO = `<img src="https://okiedokie-erp-images.s3.ap-south-1.amazonaws.com/Okie%20Dokie/2025/12/sourceURL/26aebcbe10f4ac5a3e8b-611ed1b9032568edd4f3-Okie_Dokie_App_icon__2___2_-removebg-preview.png" alt="Okie Dokie" style="height:56px;width:auto;display:block;margin:0 auto 16px" />`;
+
     // ── Scenario 1: MOM only ───────────────────────────────────────────────────
     const momOnlyBody = `
 <!doctype html><html><head><meta charset="utf-8"/><style>${STYLE}</style></head>
 <body><div class="wrap">
-  <p class="eyebrow">Okie Dokie Campus Automation</p>
-  <h1>Minutes of Meeting</h1>
-  <p class="subtitle">${mom.client_name} &nbsp;&middot;&nbsp; ${meetingDate}</p>
+  ${LOGO}
+  <p class="eyebrow" style="text-align:center">Okie Dokie Campus Automation</p>
+  <h1 style="text-align:center">Minutes of Meeting</h1>
+  <p class="subtitle" style="text-align:center">${mom.client_name} &nbsp;&middot;&nbsp; ${meetingDate}</p>
 
   <p>Dear <strong>${mom.client_name}</strong> Team,</p>
   <p>Greetings from Okie Dokie.</p>
@@ -124,9 +127,10 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
     const combinedBody = `
 <!doctype html><html><head><meta charset="utf-8"/><style>${STYLE}</style></head>
 <body><div class="wrap">
-  <p class="eyebrow">Okie Dokie Campus Automation</p>
-  <h1>${moduleStr} Handover &amp; Minutes of Meeting</h1>
-  <p class="subtitle">${mom.client_name} &nbsp;&middot;&nbsp; ${meetingDate}</p>
+  ${LOGO}
+  <p class="eyebrow" style="text-align:center">Okie Dokie Campus Automation</p>
+  <h1 style="text-align:center">${moduleStr} Handover &amp; Minutes of Meeting</h1>
+  <p class="subtitle" style="text-align:center">${mom.client_name} &nbsp;&middot;&nbsp; ${meetingDate}</p>
 
   <p>Dear <strong>${mom.client_name}</strong> Team,</p>
   <p>Greetings from Okie Dokie.</p>
