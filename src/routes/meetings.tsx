@@ -569,7 +569,7 @@ function ListPage() {
                 ))}
                 <input
                   className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                  placeholder="Client email, press Enter"
+                  placeholder="Client email (enter client email here)"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   onKeyDown={(e) => {

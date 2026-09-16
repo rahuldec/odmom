@@ -519,7 +519,7 @@ function DetailPage() {
                 <input
                   type="text"
                   value={emailInput}
-                  placeholder={emailTo.length === 0 ? "Type email and press Enter" : "Add another…"}
+                  placeholder={emailTo.length === 0 ? "Client email (enter client email here)" : "Add another…"}
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   onChange={(e) => setEmailInput(e.target.value)}
                   onKeyDown={(e) => {
