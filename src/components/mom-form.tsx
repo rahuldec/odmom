@@ -354,7 +354,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                     )}
                   >
                     <StateDot state={state} required={s.required} />
-                    <span className="font-medium">{s.label}</span>
+                    <span className="font-bold">{s.label}</span>
                     {count !== null && count > 0 && (
                       <span className="tabular ml-auto text-xs text-muted-foreground">{count}</span>
                     )}
@@ -905,7 +905,7 @@ function Section({
           <p className="eyebrow mb-1.5">
             {String(index).padStart(2, "0")} · Section
           </p>
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <Icon className="h-4 w-4 text-primary" />
             {title}
           </h2>
@@ -1239,7 +1239,7 @@ function PhotosSection({
       <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0 flex-1">
           <p className="eyebrow mb-1.5">07 · Section</p>
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <ImagePlus className="h-4 w-4 text-primary" />
             Photos <span className="text-primary">*</span>
           </h2>
@@ -1446,7 +1446,7 @@ function HandoverSection({
       <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0 flex-1">
           <p className="eyebrow mb-1.5">06 · Section</p>
-          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+          <h2 className="flex items-center gap-2 font-display text-lg font-bold">
             <FileText className="h-4 w-4 text-primary" />
             Handover Document
           </h2>
