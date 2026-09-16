@@ -28,6 +28,10 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
 
     const handoverDocs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
 
+    const modules = [...new Set(handoverDocs.map((d) => d.module).filter(Boolean))] as string[];
+    const moduleStr = modules.length > 0 ? modules.join(" & ") : mom.client_name;
+    const subject = `"${moduleStr}" Handover & Minutes of Meeting Document - Okie Dokie`;
+
     const docsHtml =
       handoverDocs.length > 0
         ? `<ul style="padding-left:20px">${handoverDocs
@@ -64,7 +68,7 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       from: { address: fromAddress, name: fromName },
       to: data.to.map((address) => ({ email_address: { address } })),
       ...(data.cc?.length ? { cc: data.cc.map((address) => ({ email_address: { address } })) } : {}),
-      subject: `Handover — ${mom.client_name} — ${formatDay(mom.meeting_date)}`,
+      subject,
       htmlbody,
     };
 
