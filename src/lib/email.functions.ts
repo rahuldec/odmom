@@ -4,7 +4,7 @@ import { getMom } from "./mom.functions";
 import { formatDay } from "./format";
 
 const LOCKED_CC = "odteam@okiedokiepay.com";
-const RESEND_API = "https://api.resend.com/emails";
+const ZEPTO_API = "https://api.zeptomail.in/v1.1/email";
 
 export const sendHandoverEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -17,10 +17,11 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) throw new Error("Email not configured — add RESEND_API_KEY to your .env");
+    const token = process.env.ZEPTO_TOKEN;
+    if (!token) throw new Error("Email not configured — add ZEPTO_TOKEN to your .env");
 
-    const from = process.env.RESEND_FROM_EMAIL ?? "MOM Portal <noreply@okiedokiepay.com>";
+    const fromAddress = process.env.ZEPTO_FROM_EMAIL ?? "noreply@okiedokiepay.com";
+    const fromName = "MOM Portal";
 
     const mom = await getMom({ data: { id: data.id } });
     if (!mom) throw new Error("MOM not found");
@@ -37,7 +38,7 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
             .join("")}</ul>`
         : `<p style="color:#888;font-size:13px">No documents attached.</p>`;
 
-    const html = `
+    const htmlbody = `
       <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:auto;background:#fff">
         <div style="background:#7C1D13;color:#fff;padding:28px 32px;border-radius:8px 8px 0 0">
           <h1 style="margin:0;font-size:20px;font-weight:700">Handover — ${mom.client_name}</h1>
@@ -58,29 +59,31 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
     `;
 
     const safe = mom.client_name.replace(/[^a-z0-9]+/gi, "_");
+
     const body: Record<string, unknown> = {
-      from,
-      to: data.to,
-      cc: [LOCKED_CC],
+      from: { address: fromAddress, name: fromName },
+      to: data.to.map((address) => ({ email_address: { address } })),
+      cc: [{ email_address: { address: LOCKED_CC } }],
       subject: `Handover — ${mom.client_name} — ${formatDay(mom.meeting_date)}`,
-      html,
+      htmlbody,
     };
 
     if (data.pdfData) {
       body.attachments = [
         {
-          filename: `MOM_${safe}_${mom.meeting_date.slice(0, 10)}.pdf`,
+          name: `MOM_${safe}_${mom.meeting_date.slice(0, 10)}.pdf`,
           content: data.pdfData,
-          content_type: "application/pdf",
+          mime_type: "application/pdf",
         },
       ];
     }
 
-    const res = await fetch(RESEND_API, {
+    const res = await fetch(ZEPTO_API, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Zoho-enczapikey ${token}`,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       body: JSON.stringify(body),
     });
