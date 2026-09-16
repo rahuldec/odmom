@@ -198,6 +198,16 @@ function DashboardPage() {
                             {team.map((t) => (
                               <Cell key={t.key} fill="var(--color-chart-2)" />
                             ))}
+                            <LabelList
+                              dataKey="visits"
+                              position="right"
+                              offset={8}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                fill: "var(--color-foreground)",
+                              }}
+                            />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
