@@ -567,7 +567,7 @@ function ListPage() {
                 ))}
                 <input
                   className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                  placeholder="name@example.com, press Enter"
+                  placeholder="Client email, press Enter"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -590,7 +590,7 @@ function ListPage() {
                 ))}
                 <input
                   className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                  placeholder="cc@example.com, press Enter"
+                  placeholder="customer-success-delight@okiedokiepay.com"
                   value={emailCcInput}
                   onChange={(e) => setEmailCcInput(e.target.value)}
                   onKeyDown={(e) => {
