@@ -178,6 +178,25 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       } catch { /* skip */ }
     }
 
+    const photos = (mom.photos ?? []).filter((p) => p.kind !== "handover_doc");
+    for (let i = 0; i < photos.length; i++) {
+      const photo = photos[i];
+      try {
+        const res = await fetch(photo.url);
+        if (!res.ok) continue;
+        const buf = await res.arrayBuffer();
+        const ext = photo.url.split("?")[0].split(".").pop()?.toLowerCase() ?? "jpg";
+        const name = photo.caption && photo.kind !== "selfie"
+          ? `${photo.caption}.${ext}`
+          : `Photo_${i + 1}.${ext}`;
+        attachments.push({
+          name,
+          content: Buffer.from(buf).toString("base64"),
+          mime_type: mimeOf(name),
+        });
+      } catch { /* skip */ }
+    }
+
     const body: Record<string, unknown> = {
       from: { address: fromAddress, name: "Okie Dokie" },
       to: data.to.map((address) => ({ email_address: { address } })),
