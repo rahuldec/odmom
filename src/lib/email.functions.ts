@@ -4,7 +4,6 @@ import { getMom } from "./mom.functions";
 import { formatDay } from "./format";
 
 const LOCKED_CC = "odteam@okiedokiepay.com";
-const ZEPTO_API = "https://api.zeptomail.in/v1.1/email";
 
 export const sendHandoverEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -17,10 +16,11 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }): Promise<{ ok: true }> => {
-    const token = process.env.ZEPTO_TOKEN;
-    if (!token) throw new Error("Email not configured — add ZEPTO_TOKEN to your .env");
+    const token = process.env.ZEPTOMAIL_TOKEN;
+    if (!token) throw new Error("Email not configured — add ZEPTOMAIL_TOKEN to your .env");
 
-    const fromAddress = process.env.ZEPTO_FROM_EMAIL ?? "noreply@okiedokiepay.com";
+    const zeptoUrl = process.env.ZEPTOMAIL_URL ?? "https://api.zeptomail.in/v1.1/email";
+    const fromAddress = process.env.ZEPTOMAIL_SENDER ?? "noreply@okiedokiepay.com";
     const fromName = "MOM Portal";
 
     const mom = await getMom({ data: { id: data.id } });
@@ -78,10 +78,10 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       ];
     }
 
-    const res = await fetch(ZEPTO_API, {
+    const res = await fetch(zeptoUrl, {
       method: "POST",
       headers: {
-        Authorization: `Zoho-enczapikey ${token}`,
+        Authorization: token,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
