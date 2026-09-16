@@ -1499,6 +1499,23 @@ function HandoverSection({
                 >
                   {d.caption ?? "Document"}
                 </a>
+                <Select
+                  value={d.module ?? ""}
+                  onValueChange={(val) => {
+                    const next = [...docs];
+                    next[i] = { ...next[i], module: val };
+                    onChange(next);
+                  }}
+                >
+                  <SelectTrigger className="h-7 w-36 shrink-0 text-xs">
+                    <SelectValue placeholder="Module…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MODULES.map((m) => (
+                      <SelectItem key={m} value={m} className="text-xs">{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <button
                   type="button"
                   onClick={() => void remove(i)}

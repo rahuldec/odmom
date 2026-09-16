@@ -32,6 +32,7 @@ export type MomPhoto = {
   url: string;
   caption?: string;
   kind?: MomPhotoKind;
+  module?: string;
 };
 
 export type MOM = {

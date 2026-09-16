@@ -441,9 +441,9 @@ async function generateMomPdf(mom: MOM) {
     section("Handover Documents");
     autoTable(doc, {
       startY: y,
-      head: [["Document"]],
-      body: handoverDocs.map((d) => [d.caption ?? "Document"]),
-      columnStyles: { 0: { fontStyle: "bold" } },
+      head: [["Module", "Document"]],
+      body: handoverDocs.map((d) => [d.module ?? "—", d.caption ?? "Document"]),
+      columnStyles: { 0: { cellWidth: 50 }, 1: { fontStyle: "bold" } },
       ...tableTheme,
     });
     // @ts-expect-error autotable
