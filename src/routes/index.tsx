@@ -8,6 +8,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -167,7 +168,7 @@ function DashboardPage() {
                           data={team}
                           layout="vertical"
                           barSize={18}
-                          margin={{ top: 4, right: 28, bottom: 0, left: 4 }}
+                          margin={{ top: 4, right: 44, bottom: 0, left: 4 }}
                         >
                           <CartesianGrid horizontal={false} stroke="var(--color-border)" />
                           <XAxis
@@ -198,6 +199,16 @@ function DashboardPage() {
                             {team.map((t) => (
                               <Cell key={t.key} fill="var(--color-chart-2)" />
                             ))}
+                            <LabelList
+                              dataKey="visits"
+                              position="right"
+                              offset={8}
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 600,
+                                fill: "var(--color-foreground)",
+                              }}
+                            />
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
@@ -281,6 +292,15 @@ function DashboardPage() {
                       {stats.byMonth.map((entry) => (
                         <Cell key={entry.label} fill="var(--color-primary)" />
                       ))}
+                      <LabelList
+                        dataKey="count"
+                        position="top"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          fill: "var(--color-foreground)",
+                        }}
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
