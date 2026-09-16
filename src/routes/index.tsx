@@ -168,7 +168,7 @@ function DashboardPage() {
                           data={team}
                           layout="vertical"
                           barSize={18}
-                          margin={{ top: 4, right: 28, bottom: 0, left: 4 }}
+                          margin={{ top: 4, right: 44, bottom: 0, left: 4 }}
                         >
                           <CartesianGrid horizontal={false} stroke="var(--color-border)" />
                           <XAxis
