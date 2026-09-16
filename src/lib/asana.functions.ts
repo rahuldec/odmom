@@ -272,7 +272,7 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
       meetingDate: z.string(),
     }).parse(input),
   )
-  .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
+  .handler(async ({ data }): Promise<{ task_id: string; task_url: string; handover_attached: number }> => {
     if (!ASANA_PROJECT_ID) throw new Error("Asana project ID not configured");
 
     const mom = await getMom({ data: { id: data.id } });
