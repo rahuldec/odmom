@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Download, Loader2, Pencil, Printer, Search, Share2 } from "lucide-react";
+import { ArrowLeft, Download, FileText, Loader2, Mail, Pencil, Printer, Search, Share2, X } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Seal } from "@/components/seal";
 import { ModuleChip } from "@/components/chips";
@@ -15,7 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { getMom } from "@/lib/mom.functions";
 import { uploadMomToAsana, getTodaysTasks } from "@/lib/asana.functions";
-import type { Attendee, PendingPoint } from "@/lib/mom-types";
+import { sendHandoverEmail } from "@/lib/email.functions";
+import type { Attendee, MomPhoto, PendingPoint } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural } from "@/lib/format";
 import { toast } from "sonner";
@@ -31,11 +32,16 @@ function DetailPage() {
   const get = useServerFn(getMom);
   const addToTask = useServerFn(uploadMomToAsana);
   const listTasks = useServerFn(getTodaysTasks);
+  const sendEmail = useServerFn(sendHandoverEmail);
   const [downloading, setDownloading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [taskQuery, setTaskQuery] = useState("");
   const [selectedTaskId, setSelectedTaskId] = useState("");
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTo, setEmailTo] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
 
   const { data: projectTasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ["asanaTodaysTasks"],
@@ -118,6 +124,29 @@ function DetailPage() {
     }
   };
 
+  const addEmailTag = (raw: string) => {
+    const emails = raw.split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean);
+    const valid = emails.filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (valid.length) setEmailTo((prev) => [...new Set([...prev, ...valid])]);
+    setEmailInput("");
+  };
+
+  const handleSendEmail = async () => {
+    const to = [...emailTo];
+    if (!to.length) { toast.error("Add at least one recipient"); return; }
+    setEmailSending(true);
+    setEmailOpen(false);
+    try {
+      const pdfData = await buildPdfBase64();
+      await sendEmail({ data: { id, to, pdfData } });
+      toast.success("Handover email sent");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send email. Try again.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   const handleAddToExistingTask = async () => {
     if (!selectedTaskId) {
       toast.error("Pick a task first");
@@ -177,6 +206,16 @@ function DetailPage() {
               <Download className="h-4 w-4" />
             )}
             Download PDF
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setEmailOpen(true)}
+            disabled={emailSending}
+          >
+            {emailSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            Send Email
           </Button>
           <Button
             variant="outline"
@@ -303,10 +342,33 @@ function DetailPage() {
           </Section>
         )}
 
-        {mom.photos && mom.photos.length > 0 && (
-          <Section title="Photos" count={mom.photos.length}>
+        {(() => {
+          const handoverDocs = (mom.photos ?? []).filter((p: MomPhoto) => p.kind === "handover_doc");
+          return handoverDocs.length > 0 ? (
+            <Section title="Handover Document" count={handoverDocs.length}>
+              <ul className="divide-y divide-border">
+                {handoverDocs.map((d: MomPhoto, i: number) => (
+                  <li key={i} className="flex items-center gap-3 px-5 py-3">
+                    <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="min-w-0 flex-1 truncate text-sm hover:underline"
+                    >
+                      {d.caption ?? "Document"}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null;
+        })()}
+
+        {mom.photos && mom.photos.filter((p: MomPhoto) => p.kind !== "handover_doc").length > 0 && (
+          <Section title="Photos" count={mom.photos.filter((p: MomPhoto) => p.kind !== "handover_doc").length}>
             <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 md:grid-cols-4">
-              {mom.photos.map((p, i) => (
+              {mom.photos.filter((p: MomPhoto) => p.kind !== "handover_doc").map((p: MomPhoto, i: number) => (
                 <a
                   key={p.path}
                   href={p.url}
@@ -324,7 +386,7 @@ function DetailPage() {
                       Selfie
                     </span>
                   )}
-                  {p.caption && (
+                  {p.caption && p.kind !== "selfie" && (
                     <p className="border-t border-border px-2 py-1.5 text-xs text-muted-foreground">
                       {p.caption}
                     </p>
@@ -400,6 +462,84 @@ function DetailPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email dialog */}
+      <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Handover Email</DialogTitle>
+            <DialogDescription>
+              The MOM PDF will be attached. CC to the OD team is locked.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="mb-2 block text-xs font-medium text-muted-foreground">
+                Mail to <span className="text-primary">*</span>
+              </Label>
+              <div className="flex min-h-10 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
+                {emailTo.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => setEmailTo((prev) => prev.filter((e) => e !== email))}
+                      className="hover:text-destructive"
+                      aria-label={`Remove ${email}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={emailInput}
+                  placeholder={emailTo.length === 0 ? "Type email and press Enter" : "Add another…"}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+                      e.preventDefault();
+                      addEmailTag(emailInput);
+                    }
+                    if (e.key === "Backspace" && !emailInput && emailTo.length) {
+                      setEmailTo((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  onBlur={() => emailInput.trim() && addEmailTag(emailInput)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block text-xs font-medium text-muted-foreground">CC (locked)</Label>
+              <div className="flex items-center gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 shrink-0" />
+                odteam@okiedokiepay.com
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setEmailOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleSendEmail()}
+                disabled={emailSending || emailTo.length === 0}
+                className="gap-1.5"
+              >
+                {emailSending && <Loader2 className="h-4 w-4 animate-spin" />}
+                <Mail className="h-4 w-4" />
+                Send
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </AppShell>

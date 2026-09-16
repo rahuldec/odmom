@@ -11,6 +11,7 @@ import {
   Check,
   Camera,
   ClipboardCheck,
+  FileText,
   GripVertical,
   ImagePlus,
   Loader2,
@@ -86,6 +87,7 @@ const SECTIONS = [
   { id: "discussion", label: "Discussion", icon: MessagesSquare, required: false },
   { id: "work", label: "Work done", icon: ClipboardCheck, required: false },
   { id: "pending", label: "Pending", icon: AlarmClockCheck, required: false },
+  { id: "handover", label: "Handover", icon: FileText, required: false },
   { id: "photos", label: "Photos", icon: ImagePlus, required: true },
 ] as const;
 
@@ -164,17 +166,22 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
 
   /* ------------------------------------------------------------ completion */
 
+  const regularPhotos = form.photos.filter((p) => p.kind !== "handover_doc");
+  const handoverDocs = form.photos.filter((p) => p.kind === "handover_doc");
+
   const status = useMemo(() => {
     const meetingDone = Boolean(
       form.client_name.trim() && form.employee_name.trim() && form.meeting_date,
     );
+    const reg = form.photos.filter((p) => p.kind !== "handover_doc");
     return {
       meeting: meetingDone ? "done" : "todo",
       attendees: form.attendees.length ? "done" : "empty",
       discussion: form.discussion_points.length ? "done" : "empty",
       work: form.work_completed.length ? "done" : "empty",
       pending: form.pending_points.length ? "done" : "empty",
-      photos: form.photos.length ? "done" : "todo",
+      handover: form.photos.filter((p) => p.kind === "handover_doc").length ? "done" : "empty",
+      photos: reg.length ? "done" : "todo",
     } as Record<SectionId, "done" | "todo" | "empty">;
   }, [form]);
 
@@ -184,7 +191,8 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
     discussion: form.discussion_points.length,
     work: form.work_completed.length,
     pending: form.pending_points.length,
-    photos: form.photos.length,
+    handover: handoverDocs.length,
+    photos: regularPhotos.length,
   };
 
   const blockers = SECTIONS.filter((s) => s.required && status[s.id] === "todo");
@@ -278,7 +286,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
     if (!form.client_name.trim()) next.client_name = "Enter the client or institute name.";
     if (!form.employee_name.trim()) next.employee_name = "Enter who attended from Okie Dokie.";
     if (!form.meeting_date) next.meeting_date = "Pick the meeting date.";
-    if (form.photos.length === 0) next.photos = "Add at least one photo from the visit.";
+    if (form.photos.filter((p) => p.kind !== "handover_doc").length === 0) next.photos = "Add at least one photo from the visit.";
 
     setErrors(next);
     const missing = Object.keys(next) as (keyof Errors)[];
@@ -780,12 +788,18 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
           ))}
         </Section>
 
-        {/* 6 — Photos */}
+        {/* 6 — Handover Documents */}
+        <HandoverSection
+          docs={handoverDocs}
+          onChange={(next) => update("photos", [...regularPhotos, ...next])}
+        />
+
+        {/* 7 — Photos */}
         <PhotosSection
           ref={photosRef}
-          photos={form.photos}
+          photos={regularPhotos}
           error={errors.photos}
-          onChange={(v) => update("photos", v)}
+          onChange={(v) => update("photos", [...v, ...handoverDocs])}
         />
 
         {/* Sticky action bar */}
@@ -1223,7 +1237,7 @@ function PhotosSection({
     <Card id="section-photos" className="scroll-mt-24 overflow-hidden">
       <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
         <div className="min-w-0 flex-1">
-          <p className="eyebrow mb-1.5">06 · Section</p>
+          <p className="eyebrow mb-1.5">07 · Section</p>
           <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
             <ImagePlus className="h-4 w-4 text-primary" />
             Photos <span className="text-primary">*</span>
@@ -1365,6 +1379,138 @@ function PhotosSection({
           )}
         </div>
         {error && <p className="mt-2 text-xs font-medium text-destructive">{error}</p>}
+      </div>
+    </Card>
+  );
+}
+
+function HandoverSection({
+  docs,
+  onChange,
+}: {
+  docs: MomPhoto[];
+  onChange: (v: MomPhoto[]) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const added: MomPhoto[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        if (file.size > 25 * 1024 * 1024) {
+          toast.error(`${file.name} is over 25 MB.`);
+          continue;
+        }
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `handover/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("mom-photos")
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (upErr) {
+          toast.error(`${file.name}: ${upErr.message}`);
+          continue;
+        }
+        const { data: signed, error: sErr } = await supabase.storage
+          .from("mom-photos")
+          .createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+        if (sErr || !signed) {
+          toast.error(`${file.name}: couldn't get a link.`);
+          continue;
+        }
+        added.push({ path, url: signed.signedUrl, caption: file.name, kind: "handover_doc" });
+      }
+      if (added.length) {
+        onChange([...docs, ...added]);
+        toast.success(`Added ${added.length} handover document${added.length > 1 ? "s" : ""}`);
+      }
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const remove = async (i: number) => {
+    const d = docs[i];
+    try {
+      await supabase.storage.from("mom-photos").remove([d.path]);
+    } catch { /* ignore */ }
+    onChange(docs.filter((_, idx) => idx !== i));
+  };
+
+  return (
+    <Card id="section-handover" className="scroll-mt-24 overflow-hidden">
+      <div className="flex flex-wrap items-start gap-3 border-b border-border px-5 py-4">
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow mb-1.5">06 · Section</p>
+          <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+            <FileText className="h-4 w-4 text-primary" />
+            Handover Document
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Upload documents to hand over to the client. These will be listed in the MOM PDF and can be emailed from the detail page.
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => void handleFiles(e.target.files)}
+        />
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="gap-1.5"
+        >
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+          {uploading ? "Uploading…" : "Add document"}
+        </Button>
+      </div>
+
+      <div className="p-5">
+        {docs.length === 0 ? (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex w-full flex-col items-center gap-2 rounded-lg border border-dashed border-border px-4 py-8 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground"
+          >
+            <FileText className="h-4 w-4" />
+            No handover documents yet.{" "}
+            <span className="font-medium text-primary">Add document</span>
+          </button>
+        ) : (
+          <div className="space-y-2">
+            {docs.map((d, i) => (
+              <div
+                key={d.path}
+                className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2.5"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <a
+                  href={d.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1 truncate text-sm hover:underline"
+                >
+                  {d.caption ?? "Document"}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => void remove(i)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={`Remove ${d.caption ?? "document"}`}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </Card>
   );

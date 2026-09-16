@@ -142,7 +142,9 @@ async function generateMomPdf(mom: MOM) {
   const NEUTRAL_TX: [number, number, number] = [107, 85, 77];
 
   const logo = await loadLogo();
-  const loadedPhotos = await Promise.all(mom.photos.map((p) => loadImage(p.url)));
+  const regularPhotos = mom.photos.filter((p) => p.kind !== "handover_doc");
+  const handoverDocs = mom.photos.filter((p) => p.kind === "handover_doc");
+  const loadedPhotos = await Promise.all(regularPhotos.map((p) => loadImage(p.url)));
 
   // ── HEADER (drawn on every page) ─────────────────────────────────────
   const headerH = 96;
@@ -434,8 +436,22 @@ async function generateMomPdf(mom: MOM) {
     y = doc.lastAutoTable.finalY + 24;
   }
 
+  // ── Handover Documents ───────────────────────────────────────────────────
+  if (handoverDocs.length) {
+    section("Handover Documents");
+    autoTable(doc, {
+      startY: y,
+      head: [["Document"]],
+      body: handoverDocs.map((d) => [d.caption ?? "Document"]),
+      columnStyles: { 0: { fontStyle: "bold" } },
+      ...tableTheme,
+    });
+    // @ts-expect-error autotable
+    y = doc.lastAutoTable.finalY + 24;
+  }
+
   // ── Photos ───────────────────────────────────────────────────────────────
-  if (mom.photos.length) {
+  if (regularPhotos.length) {
     section("Photos");
 
     const cols = 2;
@@ -446,14 +462,14 @@ async function generateMomPdf(mom: MOM) {
     const captionGap = 12;
     const rowGap = 16;
 
-    for (let i = 0; i < mom.photos.length; i += cols) {
+    for (let i = 0; i < regularPhotos.length; i += cols) {
       ensureSpace(boxH + captionGap + rowGap);
       const rowY = y;
 
       for (let c = 0; c < cols; c++) {
         const idx = i + c;
-        if (idx >= mom.photos.length) break;
-        const photo = mom.photos[idx];
+        if (idx >= regularPhotos.length) break;
+        const photo = regularPhotos[idx];
         const loaded = loadedPhotos[idx];
         const cx = margin + c * (boxW + gap);
 
