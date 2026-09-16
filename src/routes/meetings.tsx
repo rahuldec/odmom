@@ -9,6 +9,7 @@ import {
   Download,
   Images,
   Loader2,
+  Mail,
   Pencil,
   Plus,
   Search,
@@ -34,6 +35,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { getMom, listMoms } from "@/lib/mom.functions";
 import { getTodaysTasks, uploadMomToAsana } from "@/lib/asana.functions";
+import { sendHandoverEmail } from "@/lib/email.functions";
 import type { MOM, MomPhoto } from "@/lib/mom-types";
 import { downloadMomPdf, getPdfBuffer } from "@/lib/pdf";
 import { formatDay, plural, relativeDay } from "@/lib/format";
@@ -79,6 +81,7 @@ function ListPage() {
   const get = useServerFn(getMom);
   const listTasks = useServerFn(getTodaysTasks);
   const addToTask = useServerFn(uploadMomToAsana);
+  const sendEmail = useServerFn(sendHandoverEmail);
 
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [gallery, setGallery] = useState<{ title: string; photos: MomPhoto[] } | null>(null);
@@ -86,6 +89,13 @@ function ListPage() {
   const [asanaTaskQuery, setAsanaTaskQuery] = useState("");
   const [asanaSelectedTaskId, setAsanaSelectedTaskId] = useState("");
   const [asanaUploading, setAsanaUploading] = useState(false);
+
+  const [emailMomId, setEmailMomId] = useState<string | null>(null);
+  const [emailTo, setEmailTo] = useState<string[]>([]);
+  const [emailInput, setEmailInput] = useState("");
+  const [emailCc, setEmailCc] = useState<string[]>(["odteam@okiedokiepay.com"]);
+  const [emailCcInput, setEmailCcInput] = useState("");
+  const [emailSending, setEmailSending] = useState(false);
 
   const { data: asanaTasks = [], isLoading: asanaTasksLoading } = useQuery({
     queryKey: ["asanaTodaysTasks"],
@@ -182,6 +192,45 @@ function ListPage() {
       toast.error(e instanceof Error ? e.message : "Failed to update the Asana task. Try again.");
     } finally {
       setAsanaUploading(false);
+    }
+  };
+
+  const addEmailTag = (raw: string) => {
+    const valid = raw.split(/[\s,;]+/).map((e) => e.trim()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (valid.length) setEmailTo((prev) => [...new Set([...prev, ...valid])]);
+    setEmailInput("");
+  };
+
+  const addCcTag = (raw: string) => {
+    const valid = raw.split(/[\s,;]+/).map((e) => e.trim()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (valid.length) setEmailCc((prev) => [...new Set([...prev, ...valid])]);
+    setEmailCcInput("");
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailMomId || !emailTo.length) { toast.error("Add at least one recipient"); return; }
+    const id = emailMomId;
+    setEmailSending(true);
+    setEmailMomId(null);
+    try {
+      const mom = await get({ data: { id } });
+      if (!mom) throw new Error("MOM not found");
+      let pdfData: string | undefined;
+      try {
+        const buf = await getPdfBuffer(mom);
+        let s = "";
+        for (let i = 0; i < buf.length; i += 8192)
+          s += String.fromCharCode(...buf.subarray(i, i + 8192));
+        pdfData = btoa(s);
+      } catch { /* skip PDF on error */ }
+      await sendEmail({ data: { id, to: emailTo, cc: emailCc, pdfData } });
+      toast.success("Email sent");
+      setEmailTo([]);
+      setEmailCc(["odteam@okiedokiepay.com"]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to send email. Try again.");
+    } finally {
+      setEmailSending(false);
     }
   };
 
@@ -382,6 +431,7 @@ function ListPage() {
                         downloading={downloadingId === m.id}
                         onDownload={() => void handleDownload(m.id)}
                         onAsana={() => setAsanaPickerMomId(m.id)}
+                        onEmail={() => setEmailMomId(m.id)}
                       />
                     </td>
                   </tr>
@@ -427,6 +477,7 @@ function ListPage() {
                     downloading={downloadingId === m.id}
                     onDownload={() => void handleDownload(m.id)}
                     onAsana={() => setAsanaPickerMomId(m.id)}
+                    onEmail={() => setEmailMomId(m.id)}
                   />
                 </div>
               </Card>
@@ -491,6 +542,74 @@ function ListPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Email dialog */}
+      <Dialog open={!!emailMomId} onOpenChange={(o) => { if (!o) { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Email</DialogTitle>
+            <DialogDescription>
+              The MOM PDF and handover documents will be attached automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* To field */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">To</label>
+              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+                {emailTo.map((e) => (
+                  <span key={e} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-medium">
+                    {e}
+                    <button type="button" onClick={() => setEmailTo((p) => p.filter((x) => x !== e))} className="ml-0.5 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+                <input
+                  className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  placeholder="name@example.com, press Enter"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addEmailTag(emailInput); }
+                    if (e.key === "Backspace" && !emailInput && emailTo.length) setEmailTo((p) => p.slice(0, -1));
+                  }}
+                  onBlur={() => emailInput.trim() && addEmailTag(emailInput)}
+                />
+              </div>
+            </div>
+            {/* CC field */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">CC</label>
+              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+                {emailCc.map((e) => (
+                  <span key={e} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-medium">
+                    {e}
+                    <button type="button" onClick={() => setEmailCc((p) => p.filter((x) => x !== e))} className="ml-0.5 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                  </span>
+                ))}
+                <input
+                  className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  placeholder="cc@example.com, press Enter"
+                  value={emailCcInput}
+                  onChange={(e) => setEmailCcInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === " ") { e.preventDefault(); addCcTag(emailCcInput); }
+                    if (e.key === "Backspace" && !emailCcInput && emailCc.length) setEmailCc((p) => p.slice(0, -1));
+                  }}
+                  onBlur={() => emailCcInput.trim() && addCcTag(emailCcInput)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); }} disabled={emailSending}>
+                Cancel
+              </Button>
+              <Button onClick={() => void handleSendEmail()} disabled={emailSending || !emailTo.length}>
+                {emailSending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</> : <><Mail className="mr-2 h-4 w-4" /> Send Email</>}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -559,14 +678,27 @@ function RowActions({
   downloading,
   onDownload,
   onAsana,
+  onEmail,
 }: {
   id: string;
   downloading: boolean;
   onDownload: () => void;
   onAsana: () => void;
+  onEmail: () => void;
 }) {
   return (
     <div className="flex items-center justify-end gap-0.5">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onEmail}
+        className="gap-1.5 text-xs"
+        aria-label="Send Email"
+        title="Send Email"
+      >
+        <Mail className="h-3.5 w-3.5" />
+        Email
+      </Button>
       <Button
         variant="ghost"
         size="sm"
