@@ -291,6 +291,15 @@ function DashboardPage() {
                       {stats.byMonth.map((entry) => (
                         <Cell key={entry.label} fill="var(--color-primary)" />
                       ))}
+                      <LabelList
+                        dataKey="count"
+                        position="top"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          fill: "var(--color-foreground)",
+                        }}
+                      />
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
