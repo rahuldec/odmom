@@ -553,7 +553,7 @@ function DetailPage() {
                 <input
                   type="text"
                   value={emailCcInput}
-                  placeholder={emailCc.length === 0 ? "Type email and press Enter" : "Add another…"}
+                  placeholder=""
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                   onChange={(e) => setEmailCcInput(e.target.value)}
                   onKeyDown={(e) => {

@@ -590,7 +590,7 @@ function ListPage() {
                 ))}
                 <input
                   className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
-                  placeholder="customer-success-delight@okiedokiepay.com"
+                  placeholder=""
                   value={emailCcInput}
                   onChange={(e) => setEmailCcInput(e.target.value)}
                   onKeyDown={(e) => {
