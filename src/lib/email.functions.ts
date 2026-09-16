@@ -3,6 +3,36 @@ import { z } from "zod";
 import { getMom } from "./mom.functions";
 import { formatDay } from "./format";
 
+const DIVIDER = `<hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb" />`;
+
+function detailRow(label: string, value: string): string {
+  return `<tr>
+    <td style="padding:9px 0;font-size:13px;color:#555;font-weight:600;width:40%;vertical-align:top">${label}</td>
+    <td style="padding:9px 0;font-size:13px;color:#111;vertical-align:top">${value}</td>
+  </tr>`;
+}
+
+const mimeOf = (filename: string): string => {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ppt: "application/vnd.ms-powerpoint",
+    pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    zip: "application/zip",
+    txt: "text/plain",
+    csv: "text/csv",
+  };
+  return map[ext] ?? "application/octet-stream";
+};
+
 export const sendHandoverEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z
@@ -26,64 +56,65 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
     if (!mom) throw new Error("MOM not found");
 
     const handoverDocs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
+    const hasHandover = handoverDocs.length > 0;
 
     const modules = [...new Set(handoverDocs.map((d) => d.module).filter(Boolean))] as string[];
-    const moduleStr = modules.length > 0 ? modules.join(" & ") : mom.client_name;
-    const subject = `"${moduleStr}" Handover & Minutes of Meeting Document - Okie Dokie`;
+    const moduleStr = modules.length > 0 ? modules.join(" & ") : "ERP";
 
-    const docsHtml =
-      handoverDocs.length > 0
-        ? `<ul style="padding-left:20px">${handoverDocs
-            .map(
-              (d) =>
-                `<li style="margin:6px 0"><a href="${d.url}" style="color:#7C1D13">${d.caption ?? "Document"}</a></li>`,
-            )
-            .join("")}</ul>`
-        : `<p style="color:#888;font-size:13px">No documents attached.</p>`;
+    const odAttendees = (mom.attendees ?? [])
+      .filter((a) => a.team === "okie_dokie")
+      .map((a) => a.name)
+      .join(", ");
+    const erpRep = odAttendees || mom.employee_name;
 
-    const htmlbody = `
-      <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:auto;background:#fff">
-        <div style="background:#7C1D13;color:#fff;padding:28px 32px;border-radius:8px 8px 0 0">
-          <h1 style="margin:0;font-size:20px;font-weight:700">Handover — ${mom.client_name}</h1>
-          <p style="margin:6px 0 0;opacity:.75;font-size:13px">${formatDay(mom.meeting_date)} &nbsp;·&nbsp; Recorded by ${mom.employee_name}</p>
-        </div>
-        <div style="border:1px solid #eee;border-top:none;padding:28px 32px;border-radius:0 0 8px 8px">
-          <p style="margin-top:0">Please find the handover documents for <strong>${mom.client_name}</strong> attached below.</p>
+    // ── Subject ────────────────────────────────────────────────────────────────
+    const subject = hasHandover
+      ? `"${moduleStr}" Handover & Minutes of Meeting Document - Okie Dokie`
+      : `Minutes of Meeting — ${mom.client_name} — ${formatDay(mom.meeting_date)}`;
 
-          <h2 style="font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#7C1D13;margin-bottom:8px">Handover Documents</h2>
-          ${docsHtml}
+    // ── Shared wrapper helpers ─────────────────────────────────────────────────
+    const wrap = (inner: string) => `
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden">
+  <div style="background:#7C1D13;padding:24px 32px">
+    <p style="margin:0;font-size:18px;font-weight:700;color:#fff">MOM Portal</p>
+    <p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,.7)">Okie Dokie Campus Automation</p>
+  </div>
+  <div style="padding:28px 32px">
+    ${inner}
+  </div>
+  <div style="background:#f9fafb;padding:12px 32px;border-top:1px solid #e5e7eb;font-size:11px;color:#9ca3af;text-align:center">
+    Sent via Okie Dokie MOM Portal &nbsp;·&nbsp;
+    <a href="https://www.okiedokiepay.com" style="color:#9ca3af;text-decoration:none">okiedokiepay.com</a>
+  </div>
+</div>`;
 
-          <hr style="margin:24px 0;border:none;border-top:1px solid #eee" />
-          <p style="font-size:12px;color:#aaa;margin:0">
-            Sent via Okie Dokie MOM Portal &nbsp;·&nbsp; <a href="https://www.okiedokiepay.com" style="color:#aaa">okiedokiepay.com</a>
-          </p>
-        </div>
-      </div>
-    `;
+    // ── MOM intro block ────────────────────────────────────────────────────────
+    const momBlock = `
+<p style="margin:0 0 16px;font-size:14px;color:#111;line-height:1.6">Dear Team,</p>
+<p style="margin:0;font-size:14px;color:#374151;line-height:1.7">
+  Please find attached Minutes of Meeting (MOM) on <strong>${formatDay(mom.meeting_date)}</strong> for today's client visit.
+</p>`;
 
+    // ── Handover block ─────────────────────────────────────────────────────────
+    const handoverBlock = hasHandover ? `
+${DIVIDER}
+<p style="margin:0 0 16px;font-size:14px;color:#111;line-height:1.6">Dear <strong>${mom.client_name}</strong> Team,</p>
+<p style="margin:0 0 20px;font-size:14px;color:#374151;line-height:1.7">
+  We are pleased to confirm the successful handover of the <strong>${moduleStr}</strong> module to <strong>${mom.client_name}</strong>.
+</p>
+<table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+  ${detailRow("Module", moduleStr)}
+  ${detailRow("Date of Handover", formatDay(mom.meeting_date))}
+  ${erpRep ? detailRow("ERP Representative", erpRep) : ""}
+</table>
+<p style="margin:0;font-size:14px;color:#374151;line-height:1.7">
+  We are committed to providing you with continued support to ensure the successful implementation and smooth functioning of ERP system.
+</p>` : "";
+
+    const htmlbody = wrap(`${momBlock}${handoverBlock}`);
+
+    // ── Attachments ────────────────────────────────────────────────────────────
     const safe = mom.client_name.replace(/[^a-z0-9]+/gi, "_");
-
-    const mimeOf = (filename: string): string => {
-      const ext = filename.split(".").pop()?.toLowerCase() ?? "";
-      const map: Record<string, string> = {
-        pdf: "application/pdf",
-        doc: "application/msword",
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        xls: "application/vnd.ms-excel",
-        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        ppt: "application/vnd.ms-powerpoint",
-        pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        png: "image/png",
-        jpg: "image/jpeg",
-        jpeg: "image/jpeg",
-        gif: "image/gif",
-        zip: "application/zip",
-        txt: "text/plain",
-        csv: "text/csv",
-      };
-      return map[ext] ?? "application/octet-stream";
-    };
-
     const attachments: Array<{ name: string; content: string; mime_type: string }> = [];
 
     if (data.pdfData) {
