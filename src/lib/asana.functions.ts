@@ -252,9 +252,12 @@ export const createMomAsanaTask = createServerFn({ method: "POST" })
       }
     }
 
+    const handover_attached = await attachHandoverDocsToTask(taskId, mom);
+
     return {
       task_id: taskId,
       task_url: created.data.permalink_url ?? `https://app.asana.com/0/${projectId}/${taskId}`,
+      handover_attached,
     };
   });
 
