@@ -174,7 +174,11 @@ function DetailPage() {
           meetingDate: mom.meeting_date.slice(0, 10),
         },
       });
-      toast.success("MOM details and PDF added to the Asana task");
+      toast.success(
+        result.handover_attached > 0
+          ? `MOM details, PDF and ${result.handover_attached} handover document${result.handover_attached > 1 ? "s" : ""} added to the Asana task`
+          : "MOM details and PDF added to the Asana task",
+      );
       window.open(result.task_url, "_blank");
       setSelectedTaskId("");
     } catch (e) {
