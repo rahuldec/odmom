@@ -41,7 +41,7 @@ function DetailPage() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState("");
-  const [emailCc, setEmailCc] = useState<string[]>(["odteam@okiedokiepay.com"]);
+  const [emailCc, setEmailCc] = useState<string[]>(["customer-success-delight@okiedokiepay.com"]);
   const [emailCcInput, setEmailCcInput] = useState("");
   const [emailSending, setEmailSending] = useState(false);
 
