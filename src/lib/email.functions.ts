@@ -81,7 +81,7 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
     const res = await fetch(zeptoUrl, {
       method: "POST",
       headers: {
-        Authorization: token,
+        Authorization: token.startsWith("Zoho-enczapikey") ? token : `Zoho-enczapikey ${token}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
