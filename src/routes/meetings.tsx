@@ -93,7 +93,7 @@ function ListPage() {
   const [emailMomId, setEmailMomId] = useState<string | null>(null);
   const [emailTo, setEmailTo] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState("");
-  const [emailCc, setEmailCc] = useState<string[]>(["odteam@okiedokiepay.com"]);
+  const [emailCc, setEmailCc] = useState<string[]>(["odteam@okiedokiepay.com", "customer-success-delight@okiedokiepay.com"]);
   const [emailCcInput, setEmailCcInput] = useState("");
   const [emailSending, setEmailSending] = useState(false);
 
@@ -226,7 +226,7 @@ function ListPage() {
       await sendEmail({ data: { id, to: emailTo, cc: emailCc, pdfData } });
       toast.success("Email sent");
       setEmailTo([]);
-      setEmailCc(["odteam@okiedokiepay.com"]);
+      setEmailCc(["odteam@okiedokiepay.com", "customer-success-delight@okiedokiepay.com"]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send email. Try again.");
     } finally {
@@ -546,7 +546,7 @@ function ListPage() {
       </Dialog>
 
       {/* Email dialog */}
-      <Dialog open={!!emailMomId} onOpenChange={(o) => { if (!o) { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); } }}>
+      <Dialog open={!!emailMomId} onOpenChange={(o) => { if (!o) { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com", "customer-success-delight@okiedokiepay.com"]); setEmailCcInput(""); } }}>
         <DialogContent className="max-w-lg bg-white text-gray-900">
           <DialogHeader>
             <DialogTitle className="text-gray-900">Send Email</DialogTitle>
@@ -602,7 +602,7 @@ function ListPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50" onClick={() => { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); }} disabled={emailSending}>
+              <Button variant="outline" className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50" onClick={() => { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com", "customer-success-delight@okiedokiepay.com"]); setEmailCcInput(""); }} disabled={emailSending}>
                 Cancel
               </Button>
               <Button onClick={() => void handleSendEmail()} disabled={emailSending || !emailTo.length}>
