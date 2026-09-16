@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, Clock3, Download, FileText } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -289,6 +289,24 @@ function DashboardPage() {
                   No meetings recorded yet.
                 </div>
               )}
+            </div>
+          </Card>
+          {/* Resources */}
+          <Card className="mt-5 overflow-hidden">
+            <div className="border-b border-border px-5 py-4">
+              <p className="eyebrow mb-1">Resources</p>
+              <h2 className="font-display text-base font-semibold">Downloads</h2>
+            </div>
+            <div className="px-5 py-4">
+              <a
+                href="/ERP_Module_Handover_Template.pdf"
+                download="ERP Module Handover Document.pdf"
+                className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted hover:text-primary"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                <span className="flex-1">ERP Module Handover Document</span>
+                <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </a>
             </div>
           </Card>
         </>

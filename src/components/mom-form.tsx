@@ -11,6 +11,7 @@ import {
   Check,
   Camera,
   ClipboardCheck,
+  Download,
   FileText,
   GripVertical,
   ImagePlus,
@@ -1460,6 +1461,14 @@ function HandoverSection({
           className="hidden"
           onChange={(e) => void handleFiles(e.target.files)}
         />
+        <a
+          href="/ERP_Module_Handover_Template.pdf"
+          download="ERP Module Handover Document.pdf"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Template
+        </a>
         <Button
           type="button"
           size="sm"
