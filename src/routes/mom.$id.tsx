@@ -174,7 +174,11 @@ function DetailPage() {
           meetingDate: mom.meeting_date.slice(0, 10),
         },
       });
-      toast.success("MOM details and PDF added to the Asana task");
+      toast.success(
+        result.handover_attached > 0
+          ? `MOM details, PDF and ${result.handover_attached} handover document${result.handover_attached > 1 ? "s" : ""} added to the Asana task`
+          : "MOM details and PDF added to the Asana task",
+      );
       window.open(result.task_url, "_blank");
       setSelectedTaskId("");
     } catch (e) {
@@ -423,7 +427,8 @@ function DetailPage() {
           <DialogHeader>
             <DialogTitle>Add to Asana</DialogTitle>
             <DialogDescription>
-              The MOM details go into the task description and the PDF is attached.
+              The MOM details go into the task description, and the MOM PDF plus any handover
+              documents are attached.
             </DialogDescription>
           </DialogHeader>
 

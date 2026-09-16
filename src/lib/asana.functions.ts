@@ -108,21 +108,33 @@ export const getProjectTasks = createServerFn({ method: "GET" })
 
 
 
-async function attachPdfToTask(
+const mimeOf = (filename: string): string => {
+  const ext = filename.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp",
+    zip: "application/zip", txt: "text/plain", csv: "text/csv",
+  };
+  return map[ext] ?? "application/octet-stream";
+};
+
+/** Uploads any buffer to an Asana task as an attachment. */
+async function attachFileToTask(
   taskId: string,
-  pdfData: string,
-  clientName: string,
-  meetingDate: string,
+  buffer: Buffer,
+  filename: string,
+  contentType: string,
 ) {
-  const boundary = `----FormBoundary${Date.now()}`;
-  const buffer = Buffer.from(pdfData, "base64");
-  const safe = clientName.replace(/[^a-z0-9]+/gi, "_");
-  const filename = `MOM_${safe}_${meetingDate}.pdf`;
+  const boundary = `----FormBoundary${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const parts = [
     `--${boundary}`,
     `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-    `Content-Type: application/pdf`,
+    `Content-Type: ${contentType}`,
     ``,
   ];
 
@@ -143,8 +155,51 @@ async function attachPdfToTask(
   });
 
   if (!res.ok) {
-    console.error(`PDF attach failed [${res.status}]: ${await res.text()}`);
+    console.error(`Attach "${filename}" failed [${res.status}]: ${await res.text()}`);
   }
+}
+
+async function attachPdfToTask(
+  taskId: string,
+  pdfData: string,
+  clientName: string,
+  meetingDate: string,
+) {
+  const safe = clientName.replace(/[^a-z0-9]+/gi, "_");
+  await attachFileToTask(
+    taskId,
+    Buffer.from(pdfData, "base64"),
+    `MOM_${safe}_${meetingDate}.pdf`,
+    "application/pdf",
+  );
+}
+
+/** Downloads every handover document on the MOM and attaches it to the task. */
+async function attachHandoverDocsToTask(taskId: string, mom: MOM): Promise<number> {
+  const docs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
+  let attached = 0;
+
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    try {
+      const res = await fetch(doc.url);
+      if (!res.ok) {
+        console.error(`Handover doc fetch failed [${res.status}]: ${doc.url}`);
+        continue;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const fallbackExt = doc.url.split("?")[0].split(".").pop()?.toLowerCase() ?? "pdf";
+      const name = doc.caption?.includes(".")
+        ? doc.caption
+        : `${doc.caption ?? `Handover_Document_${i + 1}`}.${fallbackExt}`;
+      await attachFileToTask(taskId, buf, name, mimeOf(name));
+      attached++;
+    } catch (error) {
+      console.error("Error attaching handover document:", String(error));
+    }
+  }
+
+  return attached;
 }
 
 /** Creates a brand-new Asana task for this MOM and attaches the PDF. */
@@ -157,7 +212,7 @@ export const createMomAsanaTask = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
+  .handler(async ({ data }): Promise<{ task_id: string; task_url: string; handover_attached: number }> => {
     const projectId = process.env.ASANA_PROJECT_ID ?? ASANA_PROJECT_ID;
     if (!projectId) throw new Error("Asana project ID not configured");
 
@@ -197,9 +252,12 @@ export const createMomAsanaTask = createServerFn({ method: "POST" })
       }
     }
 
+    const handover_attached = await attachHandoverDocsToTask(taskId, mom);
+
     return {
       task_id: taskId,
       task_url: created.data.permalink_url ?? `https://app.asana.com/0/${projectId}/${taskId}`,
+      handover_attached,
     };
   });
 
@@ -214,7 +272,7 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
       meetingDate: z.string(),
     }).parse(input),
   )
-  .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
+  .handler(async ({ data }): Promise<{ task_id: string; task_url: string; handover_attached: number }> => {
     if (!ASANA_PROJECT_ID) throw new Error("Asana project ID not configured");
 
     const mom = await getMom({ data: { id: data.id } });
@@ -241,46 +299,18 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     // Attach PDF if provided
     if (data.pdfData) {
       try {
-        const boundary = `----FormBoundary${Date.now()}`;
-        const buffer = Buffer.from(data.pdfData, "base64");
-        const safe = data.clientName.replace(/[^a-z0-9]+/gi, "_");
-        const filename = `MOM_${safe}_${data.meetingDate}.pdf`;
-
-        // Manually construct multipart/form-data
-        const parts = [
-          `--${boundary}`,
-          `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-          `Content-Type: application/pdf`,
-          ``,
-        ];
-
-        const body = Buffer.concat([
-          Buffer.from(parts.join("\r\n") + "\r\n"),
-          buffer,
-          Buffer.from(`\r\n--${boundary}--\r\n`),
-        ]);
-
-        const token = await getValidToken();
-        const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": `multipart/form-data; boundary=${boundary}`,
-          },
-          body,
-        });
-
-        if (!attachResponse.ok) {
-          console.error(`PDF attach failed: ${attachResponse.status}`);
-        }
+        await attachPdfToTask(taskId, data.pdfData, data.clientName, data.meetingDate);
       } catch (error) {
         console.error("Error attaching PDF:", String(error));
       }
     }
 
+    const handover_attached = await attachHandoverDocsToTask(taskId, mom);
+
     return {
       task_id: taskId,
       task_url: `https://app.asana.com/0/${ASANA_PROJECT_ID}/${taskId}`,
+      handover_attached,
     };
   });
 
@@ -343,6 +373,14 @@ function formatAsanaTaskDescription(mom: MOM): string {
         lines.push(`  • [${p.module}] ${p.requirement}`);
       });
     }
+  }
+
+  const handoverDocs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
+  if (handoverDocs.length > 0) {
+    lines.push("\n**Handover Documents (attached):**");
+    handoverDocs.forEach((d) => {
+      lines.push(`  • ${d.module ? `[${d.module}] ` : ""}${d.caption ?? "Document"}`);
+    });
   }
 
   if (mom.summary) {
