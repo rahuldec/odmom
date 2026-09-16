@@ -547,26 +547,26 @@ function ListPage() {
 
       {/* Email dialog */}
       <Dialog open={!!emailMomId} onOpenChange={(o) => { if (!o) { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg bg-white text-gray-900">
           <DialogHeader>
-            <DialogTitle>Send Email</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Send Email</DialogTitle>
+            <DialogDescription className="text-gray-500">
               The MOM PDF and handover documents will be attached automatically.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {/* To field */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">To</label>
-              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+              <label className="text-sm font-semibold text-gray-700">To</label>
+              <div className="flex min-h-10 flex-wrap gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-200">
                 {emailTo.map((e) => (
-                  <span key={e} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-medium">
+                  <span key={e} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
                     {e}
-                    <button type="button" onClick={() => setEmailTo((p) => p.filter((x) => x !== e))} className="ml-0.5 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setEmailTo((p) => p.filter((x) => x !== e))} className="ml-0.5 text-gray-400 hover:text-gray-700"><X className="h-3 w-3" /></button>
                   </span>
                 ))}
                 <input
-                  className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
                   placeholder="name@example.com, press Enter"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
@@ -580,16 +580,16 @@ function ListPage() {
             </div>
             {/* CC field */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">CC</label>
-              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 focus-within:ring-2 focus-within:ring-ring">
+              <label className="text-sm font-semibold text-gray-700">CC</label>
+              <div className="flex min-h-10 flex-wrap gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 shadow-sm focus-within:border-gray-400 focus-within:ring-2 focus-within:ring-gray-200">
                 {emailCc.map((e) => (
-                  <span key={e} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs font-medium">
+                  <span key={e} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
                     {e}
-                    <button type="button" onClick={() => setEmailCc((p) => p.filter((x) => x !== e))} className="ml-0.5 text-muted-foreground hover:text-foreground"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setEmailCc((p) => p.filter((x) => x !== e))} className="ml-0.5 text-gray-400 hover:text-gray-700"><X className="h-3 w-3" /></button>
                   </span>
                 ))}
                 <input
-                  className="min-w-[160px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  className="min-w-[160px] flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
                   placeholder="cc@example.com, press Enter"
                   value={emailCcInput}
                   onChange={(e) => setEmailCcInput(e.target.value)}
@@ -602,7 +602,7 @@ function ListPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); }} disabled={emailSending}>
+              <Button variant="outline" className="border-gray-200 bg-white text-gray-700 hover:bg-gray-50" onClick={() => { setEmailMomId(null); setEmailTo([]); setEmailInput(""); setEmailCc(["odteam@okiedokiepay.com"]); setEmailCcInput(""); }} disabled={emailSending}>
                 Cancel
               </Button>
               <Button onClick={() => void handleSendEmail()} disabled={emailSending || !emailTo.length}>
