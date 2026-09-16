@@ -427,7 +427,8 @@ function DetailPage() {
           <DialogHeader>
             <DialogTitle>Add to Asana</DialogTitle>
             <DialogDescription>
-              The MOM details go into the task description and the PDF is attached.
+              The MOM details go into the task description, and the MOM PDF plus any handover
+              documents are attached.
             </DialogDescription>
           </DialogHeader>
 
