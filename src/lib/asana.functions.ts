@@ -375,6 +375,14 @@ function formatAsanaTaskDescription(mom: MOM): string {
     }
   }
 
+  const handoverDocs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
+  if (handoverDocs.length > 0) {
+    lines.push("\n**Handover Documents (attached):**");
+    handoverDocs.forEach((d) => {
+      lines.push(`  • ${d.module ? `[${d.module}] ` : ""}${d.caption ?? "Document"}`);
+    });
+  }
+
   if (mom.summary) {
     lines.push(`\n**Summary:**\n${mom.summary}`);
   }
