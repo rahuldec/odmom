@@ -212,7 +212,7 @@ export const createMomAsanaTask = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }): Promise<{ task_id: string; task_url: string }> => {
+  .handler(async ({ data }): Promise<{ task_id: string; task_url: string; handover_attached: number }> => {
     const projectId = process.env.ASANA_PROJECT_ID ?? ASANA_PROJECT_ID;
     if (!projectId) throw new Error("Asana project ID not configured");
 
