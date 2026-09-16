@@ -367,7 +367,8 @@ function ListPage() {
       ) : (
         <>
           {/* Desktop */}
-          <Card className="hidden overflow-x-auto md:block">
+          <Card className="hidden md:block">
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-sm">
               <thead className="border-b border-border bg-muted/60">
                 <tr className="eyebrow">
@@ -438,6 +439,7 @@ function ListPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </Card>
 
           {/* Mobile */}
