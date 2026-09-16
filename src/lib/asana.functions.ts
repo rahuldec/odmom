@@ -108,21 +108,33 @@ export const getProjectTasks = createServerFn({ method: "GET" })
 
 
 
-async function attachPdfToTask(
+const mimeOf = (filename: string): string => {
+  const ext = filename.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    pdf: "application/pdf",
+    doc: "application/msword",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    xls: "application/vnd.ms-excel",
+    xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp",
+    zip: "application/zip", txt: "text/plain", csv: "text/csv",
+  };
+  return map[ext] ?? "application/octet-stream";
+};
+
+/** Uploads any buffer to an Asana task as an attachment. */
+async function attachFileToTask(
   taskId: string,
-  pdfData: string,
-  clientName: string,
-  meetingDate: string,
+  buffer: Buffer,
+  filename: string,
+  contentType: string,
 ) {
-  const boundary = `----FormBoundary${Date.now()}`;
-  const buffer = Buffer.from(pdfData, "base64");
-  const safe = clientName.replace(/[^a-z0-9]+/gi, "_");
-  const filename = `MOM_${safe}_${meetingDate}.pdf`;
+  const boundary = `----FormBoundary${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const parts = [
     `--${boundary}`,
     `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-    `Content-Type: application/pdf`,
+    `Content-Type: ${contentType}`,
     ``,
   ];
 
@@ -143,8 +155,51 @@ async function attachPdfToTask(
   });
 
   if (!res.ok) {
-    console.error(`PDF attach failed [${res.status}]: ${await res.text()}`);
+    console.error(`Attach "${filename}" failed [${res.status}]: ${await res.text()}`);
   }
+}
+
+async function attachPdfToTask(
+  taskId: string,
+  pdfData: string,
+  clientName: string,
+  meetingDate: string,
+) {
+  const safe = clientName.replace(/[^a-z0-9]+/gi, "_");
+  await attachFileToTask(
+    taskId,
+    Buffer.from(pdfData, "base64"),
+    `MOM_${safe}_${meetingDate}.pdf`,
+    "application/pdf",
+  );
+}
+
+/** Downloads every handover document on the MOM and attaches it to the task. */
+async function attachHandoverDocsToTask(taskId: string, mom: MOM): Promise<number> {
+  const docs = (mom.photos ?? []).filter((p) => p.kind === "handover_doc");
+  let attached = 0;
+
+  for (let i = 0; i < docs.length; i++) {
+    const doc = docs[i];
+    try {
+      const res = await fetch(doc.url);
+      if (!res.ok) {
+        console.error(`Handover doc fetch failed [${res.status}]: ${doc.url}`);
+        continue;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      const fallbackExt = doc.url.split("?")[0].split(".").pop()?.toLowerCase() ?? "pdf";
+      const name = doc.caption?.includes(".")
+        ? doc.caption
+        : `${doc.caption ?? `Handover_Document_${i + 1}`}.${fallbackExt}`;
+      await attachFileToTask(taskId, buf, name, mimeOf(name));
+      attached++;
+    } catch (error) {
+      console.error("Error attaching handover document:", String(error));
+    }
+  }
+
+  return attached;
 }
 
 /** Creates a brand-new Asana task for this MOM and attaches the PDF. */
