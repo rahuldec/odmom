@@ -299,46 +299,18 @@ export const uploadMomToAsana = createServerFn({ method: "POST" })
     // Attach PDF if provided
     if (data.pdfData) {
       try {
-        const boundary = `----FormBoundary${Date.now()}`;
-        const buffer = Buffer.from(data.pdfData, "base64");
-        const safe = data.clientName.replace(/[^a-z0-9]+/gi, "_");
-        const filename = `MOM_${safe}_${data.meetingDate}.pdf`;
-
-        // Manually construct multipart/form-data
-        const parts = [
-          `--${boundary}`,
-          `Content-Disposition: form-data; name="file"; filename="${filename}"`,
-          `Content-Type: application/pdf`,
-          ``,
-        ];
-
-        const body = Buffer.concat([
-          Buffer.from(parts.join("\r\n") + "\r\n"),
-          buffer,
-          Buffer.from(`\r\n--${boundary}--\r\n`),
-        ]);
-
-        const token = await getValidToken();
-        const attachResponse = await fetch(`${ASANA_API_BASE}/tasks/${taskId}/attachments`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": `multipart/form-data; boundary=${boundary}`,
-          },
-          body,
-        });
-
-        if (!attachResponse.ok) {
-          console.error(`PDF attach failed: ${attachResponse.status}`);
-        }
+        await attachPdfToTask(taskId, data.pdfData, data.clientName, data.meetingDate);
       } catch (error) {
         console.error("Error attaching PDF:", String(error));
       }
     }
 
+    const handover_attached = await attachHandoverDocsToTask(taskId, mom);
+
     return {
       task_id: taskId,
       task_url: `https://app.asana.com/0/${ASANA_PROJECT_ID}/${taskId}`,
+      handover_attached,
     };
   });
 
