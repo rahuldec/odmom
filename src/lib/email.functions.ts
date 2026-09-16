@@ -3,7 +3,6 @@ import { z } from "zod";
 import { getMom } from "./mom.functions";
 import { formatDay } from "./format";
 
-const LOCKED_CC = "odteam@okiedokiepay.com";
 
 export const sendHandoverEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
@@ -11,6 +10,7 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
       .object({
         id: z.string().uuid(),
         to: z.array(z.string().email()).min(1, "At least one recipient is required"),
+        cc: z.array(z.string().email()).optional(),
         pdfData: z.string().optional(),
       })
       .parse(input),
@@ -63,7 +63,7 @@ export const sendHandoverEmail = createServerFn({ method: "POST" })
     const body: Record<string, unknown> = {
       from: { address: fromAddress, name: fromName },
       to: data.to.map((address) => ({ email_address: { address } })),
-      cc: [{ email_address: { address: LOCKED_CC } }],
+      ...(data.cc?.length ? { cc: data.cc.map((address) => ({ email_address: { address } })) } : {}),
       subject: `Handover — ${mom.client_name} — ${formatDay(mom.meeting_date)}`,
       htmlbody,
     };

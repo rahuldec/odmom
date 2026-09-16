@@ -41,6 +41,8 @@ function DetailPage() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailTo, setEmailTo] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState("");
+  const [emailCc, setEmailCc] = useState<string[]>(["odteam@okiedokiepay.com"]);
+  const [emailCcInput, setEmailCcInput] = useState("");
   const [emailSending, setEmailSending] = useState(false);
 
   const { data: projectTasks = [], isLoading: tasksLoading } = useQuery({
@@ -131,6 +133,13 @@ function DetailPage() {
     setEmailInput("");
   };
 
+  const addCcTag = (raw: string) => {
+    const emails = raw.split(/[\s,;]+/).map((e) => e.trim()).filter(Boolean);
+    const valid = emails.filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (valid.length) setEmailCc((prev) => [...new Set([...prev, ...valid])]);
+    setEmailCcInput("");
+  };
+
   const handleSendEmail = async () => {
     const to = [...emailTo];
     if (!to.length) { toast.error("Add at least one recipient"); return; }
@@ -138,7 +147,7 @@ function DetailPage() {
     setEmailOpen(false);
     try {
       const pdfData = await buildPdfBase64();
-      await sendEmail({ data: { id, to, pdfData } });
+      await sendEmail({ data: { id, to, cc: emailCc, pdfData } });
       toast.success("Handover email sent");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to send email. Try again.");
@@ -471,7 +480,7 @@ function DetailPage() {
           <DialogHeader>
             <DialogTitle>Send Handover Email</DialogTitle>
             <DialogDescription>
-              The MOM PDF will be attached. CC to the OD team is locked.
+              The MOM PDF will be attached.
             </DialogDescription>
           </DialogHeader>
 
@@ -518,10 +527,41 @@ function DetailPage() {
             </div>
 
             <div>
-              <Label className="mb-2 block text-xs font-medium text-muted-foreground">CC (locked)</Label>
-              <div className="flex items-center gap-2 rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-                <Mail className="h-3.5 w-3.5 shrink-0" />
-                odteam@okiedokiepay.com
+              <Label className="mb-2 block text-xs font-medium text-muted-foreground">CC</Label>
+              <div className="flex min-h-10 flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
+                {emailCc.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                  >
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => setEmailCc((prev) => prev.filter((e) => e !== email))}
+                      className="hover:text-destructive"
+                      aria-label={`Remove ${email}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={emailCcInput}
+                  placeholder={emailCc.length === 0 ? "Type email and press Enter" : "Add another…"}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                  onChange={(e) => setEmailCcInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+                      e.preventDefault();
+                      addCcTag(emailCcInput);
+                    }
+                    if (e.key === "Backspace" && !emailCcInput && emailCc.length) {
+                      setEmailCc((prev) => prev.slice(0, -1));
+                    }
+                  }}
+                  onBlur={() => emailCcInput.trim() && addCcTag(emailCcInput)}
+                />
               </div>
             </div>
 
