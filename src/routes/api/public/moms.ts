@@ -85,7 +85,7 @@ export const Route = createFileRoute("/api/public/moms")({
       GET: async ({ request }) => {
         if (!authorized(request)) return json({ error: "Unauthorized" }, 401);
         const url = new URL(request.url);
-        const limit = Math.min(Number(url.searchParams.get("limit")) || 50, 200);
+        const limit = Math.min(Number(url.searchParams.get("limit")) || 50, 1000);
         const client = url.searchParams.get("client");
         const from = url.searchParams.get("from");
         const to = url.searchParams.get("to");
