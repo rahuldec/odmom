@@ -1,9 +1,17 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { ArrowUpRight, CheckSquare, LayoutDashboard, Menu, Plus, Rows3 } from "lucide-react";
+import { ArrowUpRight, CheckSquare, LayoutDashboard, LogOut, Menu, Plus, Rows3, User } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +20,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/routes/__root";
 import logoUrl from "@/logo.png";
 
 const NAV = [
@@ -24,6 +33,7 @@ const CHECKLIST_URL = "https://odchecklist.lovable.app/";
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
+  const { session, logout } = useAuth();
 
   const isActive = (to: string) => (to === "/" ? pathname === "/" : pathname.startsWith(to));
 
@@ -84,6 +94,28 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             <ThemeToggle />
 
+            {/* User menu */}
+            {session && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Account menu">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="font-normal">
+                    <p className="text-sm font-semibold">{session.name}</p>
+                    <p className="text-xs text-muted-foreground">+91 {session.mobile}</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* Mobile nav */}
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
@@ -128,6 +160,19 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <Plus className="h-4 w-4" /> New MOM
                   </Button>
                 </Link>
+                {session && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <p className="px-3 text-sm font-medium">{session.name}</p>
+                    <p className="px-3 text-xs text-muted-foreground">+91 {session.mobile}</p>
+                    <button
+                      onClick={() => { setMenuOpen(false); logout(); }}
+                      className="mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
           </div>

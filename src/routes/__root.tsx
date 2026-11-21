@@ -4,16 +4,32 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
+  useRouterState,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
-import type { ErrorComponentProps } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { getSession, clearSession, type Session } from "@/lib/auth";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { Seal } from "@/components/seal";
+
+// --- Auth context -----------------------------------------------------------
+
+type AuthCtx = {
+  session: Session | null;
+  logout: () => void;
+};
+
+const AuthContext = createContext<AuthCtx>({ session: null, logout: () => {} });
+
+export function useAuth(): AuthCtx {
+  return useContext(AuthContext);
+}
 
 const ICON_URL =
   "https://okiedokie-erp-images.s3.ap-south-1.amazonaws.com/Okie%20Dokie/2025/12/sourceURL/26aebcbe10f4ac5a3e8b-611ed1b9032568edd4f3-Okie_Dokie_App_icon__2___2_-removebg-preview.png";
@@ -157,13 +173,39 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+const PUBLIC_PATHS = ["/login"];
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const [session, setSessionState] = useState<Session | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const s = getSession();
+    setSessionState(s);
+    setChecked(true);
+    if (!s && !PUBLIC_PATHS.includes(pathname)) {
+      navigate({ to: "/login" });
+    }
+  }, [pathname]);
+
+  function logout() {
+    clearSession();
+    setSessionState(null);
+    navigate({ to: "/login" });
+  }
+
+  // Avoid flash of protected content before the client-side check runs
+  if (!checked && !PUBLIC_PATHS.includes(pathname)) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors position="top-right" />
-    </QueryClientProvider>
+    <AuthContext.Provider value={{ session, logout }}>
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </QueryClientProvider>
+    </AuthContext.Provider>
   );
 }
