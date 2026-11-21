@@ -16,10 +16,12 @@ export const sendLoginOtp = createServerFn({ method: "GET" })
     const res = await fetch(`${ERP_API}/sendLogin/otp?mobile=${data.mobile}`);
     if (!res.ok) throw new Error("ERP server unreachable");
     const json = (await res.json()) as ErpResponse;
-    if (json.type !== "success") {
+    if (json.type?.toLowerCase() !== "success") {
       throw new Error(json.message ?? "Failed to send OTP");
     }
-    return { requestId: json.request_id as string };
+    // Forward the ERP session cookie so the verify call shares the same session
+    const sessionCookie = res.headers.get("set-cookie") ?? "";
+    return { requestId: json.request_id as string, sessionCookie };
   });
 
 // OTP verify — the ERP rejects unregistered numbers here with "Mobile no. not found"
@@ -29,14 +31,18 @@ export const verifyLoginOtp = createServerFn({ method: "GET" })
       mobile: z.string(),
       otp: z.string().min(4).max(6),
       requestId: z.string(),
+      sessionCookie: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
+    const headers: Record<string, string> = {};
+    if (data.sessionCookie) headers["Cookie"] = data.sessionCookie;
     const res = await fetch(
       `${ERP_API}/verifyLogin/otp?mobile=${data.mobile}&otp=${data.otp}&request_id=${data.requestId}`,
+      { headers },
     );
     const json = (await res.json()) as ErpResponse;
-    if (json.type !== "success") {
+    if (json.type?.toLowerCase() !== "success") {
       throw new Error(json.message ?? "Invalid or expired OTP");
     }
     return { name: (json.name as string) ?? null };
@@ -57,7 +63,7 @@ export const loginWithPassword = createServerFn({ method: "POST" })
       body: JSON.stringify({ mobile: data.mobile, password: data.password }),
     });
     const json = (await res.json()) as ErpResponse;
-    if (json.type !== "success") {
+    if (json.type?.toLowerCase() !== "success") {
       throw new Error(json.message ?? "Invalid mobile number or password");
     }
     return { name: (json.name as string) ?? null };

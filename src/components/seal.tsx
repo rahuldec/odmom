@@ -36,6 +36,7 @@ export function Seal({
         <path id={`bot-${id}`} d="M 5,50 A 45,45 0 0 0 95,50" fill="none" />
       </defs>
 
+      <circle cx="50" cy="50" r="47.5" fill="white" />
       <circle cx="50" cy="50" r="48" fill="none" stroke="currentColor" strokeWidth="1.4" />
       <circle
         cx="50"

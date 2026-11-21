@@ -1,4 +1,4 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { ArrowRight, Eye, EyeOff, KeyRound, RotateCcw, ShieldCheck, Smartphone } from "lucide-react";
 import { Seal } from "@/components/seal";
@@ -20,7 +20,6 @@ type Mode = "otp" | "password";
 type OtpStep = "mobile" | "otp";
 
 function LoginPage() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>("password");
 
   // Shared
@@ -31,6 +30,7 @@ function LoginPage() {
   // OTP flow
   const [otpStep, setOtpStep] = useState<OtpStep>("mobile");
   const [requestId, setRequestId] = useState("");
+  const [sessionCookie, setSessionCookie] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -46,10 +46,9 @@ function LoginPage() {
     setPassword("");
   }
 
-  async function finishLogin(name: string | null) {
+  function finishLogin(name: string | null) {
     setSession({ mobile, name: name ?? `+91 ${mobile}` });
-    await router.invalidate();
-    router.navigate({ to: "/" });
+    window.location.href = "/";
   }
 
   // --- Password login ---
@@ -75,6 +74,7 @@ function LoginPage() {
     try {
       const result = await sendLoginOtp({ data: { mobile } });
       setRequestId(result.requestId);
+      setSessionCookie(result.sessionCookie ?? "");
       setOtpStep("otp");
       setTimeout(() => otpRefs.current[0]?.focus(), 50);
     } catch (err: unknown) {
@@ -95,7 +95,7 @@ function LoginPage() {
     }
     setLoading(true);
     try {
-      const result = await verifyLoginOtp({ data: { mobile, otp: otpString, requestId } });
+      const result = await verifyLoginOtp({ data: { mobile, otp: otpString, requestId, sessionCookie } });
       await finishLogin(result.name);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
