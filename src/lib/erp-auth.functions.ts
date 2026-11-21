@@ -34,32 +34,24 @@ export const sendLoginOtp = createServerFn({ method: "GET" })
     const res = await fetch(`${ERP_API}/sendLogin/otp?mobile=${data.mobile}`);
     const json = (await res.json()) as ErpResponse;
     if (!res.ok) throw new Error(json.message ?? "Failed to send OTP");
-    // Forward the ERP session cookie so the verify call shares the same session
-    const rawSetCookie = res.headers.get("set-cookie") ?? "";
-    const sessionCookie = rawSetCookie ? parseCookieHeader(rawSetCookie) : "";
-    return { requestId: json.request_id as string, sessionCookie };
+    return { ok: true };
   });
 
-// OTP verify — the ERP rejects unregistered numbers here with "Mobile no. not found"
+// OTP verify — endpoint: /api/verify/otp?source=erp (no request_id needed)
 export const verifyLoginOtp = createServerFn({ method: "GET" })
   .validator(
     z.object({
       mobile: z.string(),
       otp: z.string().min(4).max(6),
-      requestId: z.string(),
-      sessionCookie: z.string().optional(),
     }),
   )
   .handler(async ({ data }) => {
-    const headers: Record<string, string> = {};
-    if (data.sessionCookie) headers["Cookie"] = data.sessionCookie;
     const res = await fetch(
-      `${ERP_API}/verifyLogin/otp?mobile=${data.mobile}&otp=${data.otp}&request_id=${data.requestId}`,
-      { headers },
+      `${ERP_API}/verify/otp?mobile=${data.mobile}&otp=${data.otp}&source=erp`,
     );
     const json = (await res.json()) as ErpResponse;
     if (!res.ok) throw new Error(json.message ?? "Invalid or expired OTP");
-    return { name: nameFromJwt(json.token) ?? (json.name as string) ?? null };
+    return { name: (json.name as string) ?? nameFromJwt(json.token) ?? null };
   });
 
 // Password login — POST /loginV2 with {mobile, password}
