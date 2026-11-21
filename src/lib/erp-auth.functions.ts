@@ -6,6 +6,14 @@ const ERP_BASE = "https://admission-api.odpay.in";
 
 type ErpResponse = { type?: string; token?: string; request_id?: string; name?: string; message?: string; data?: unknown };
 
+// Set-Cookie: "token=eyJ...; Path=/; HttpOnly" → "token=eyJ..."
+function parseCookieHeader(setCookie: string): string {
+  return setCookie
+    .split(",")
+    .map((c) => c.split(";")[0].trim())
+    .join("; ");
+}
+
 function nameFromJwt(token: string | undefined): string | null {
   if (!token) return null;
   try {
@@ -27,7 +35,8 @@ export const sendLoginOtp = createServerFn({ method: "GET" })
     const json = (await res.json()) as ErpResponse;
     if (!res.ok) throw new Error(json.message ?? "Failed to send OTP");
     // Forward the ERP session cookie so the verify call shares the same session
-    const sessionCookie = res.headers.get("set-cookie") ?? "";
+    const rawSetCookie = res.headers.get("set-cookie") ?? "";
+    const sessionCookie = rawSetCookie ? parseCookieHeader(rawSetCookie) : "";
     return { requestId: json.request_id as string, sessionCookie };
   });
 

@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { ArrowRight, Eye, EyeOff, KeyRound, RotateCcw, ShieldCheck, Smartphone } from "lucide-react";
-import { Seal } from "@/components/seal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendLoginOtp, verifyLoginOtp, loginWithPassword } from "@/lib/erp-auth.functions";
@@ -134,11 +133,7 @@ function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <Seal
-            className="h-24 w-24 text-primary"
-            topText="MOM PORTAL"
-            bottomText="OKIE DOKIE"
-          />
+          <img src="/od-seal.png" alt="Okie Dokie" className="h-28 w-28 object-contain" />
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">MOM Portal</h1>
             <p className="mt-1 text-sm text-muted-foreground">Okie Dokie · Campus Automation</p>
