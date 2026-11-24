@@ -462,15 +462,15 @@ async function generateMomPdf(mom: MOM) {
   doc.setFont("times", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
-  doc.text(mom.employee_name, margin, y);
-  doc.text(mom.client_name, margin + sigW + 40, y);
+  doc.text(mom.client_name, margin, y);
+  doc.text(mom.employee_name, margin + sigW + 40, y);
   y += 11;
 
   doc.setFont("times", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...MID);
-  doc.text("Okie Dokie Team", margin, y);
-  doc.text("Client Representative", margin + sigW + 40, y);
+  doc.text("Client Representative", margin, y);
+  doc.text("Okie Dokie Team", margin + sigW + 40, y);
 
   // ── FOOTER (every page) ───────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
