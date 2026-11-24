@@ -127,7 +127,7 @@ async function generateMomPdf(mom: MOM) {
   const CHARCOAL: [number, number, number] = [55, 55, 55];
   const MID: [number, number, number] = [115, 115, 115];
   const RULE: [number, number, number] = [200, 200, 200];
-  const ROW_ALT: [number, number, number] = [247, 247, 247];
+  const ROW_ALT: [number, number, number] = [238, 238, 238];
   const WHITE: [number, number, number] = [255, 255, 255];
   const GOLD_BG: [number, number, number] = [255, 243, 199];
   const GOLD_TX: [number, number, number] = [124, 86, 0];
@@ -234,10 +234,14 @@ async function generateMomPdf(mom: MOM) {
     sectionNo++;
     ensureSpace(36);
 
+    // Maroon left accent stripe
+    doc.setFillColor(...MAROON);
+    doc.rect(margin, y - 12, 3, 14, "F");
+
     doc.setFont("times", "bold");
     doc.setFontSize(10.5);
     doc.setTextColor(...DARK);
-    doc.text(`${sectionNo}.  ${title.toUpperCase()}`, margin, y);
+    doc.text(`${sectionNo}.  ${title.toUpperCase()}`, margin + 9, y);
     y += 5;
 
     doc.setDrawColor(...CHARCOAL);
