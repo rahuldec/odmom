@@ -35,28 +35,6 @@ function loadLogo(): Promise<LoadedLogo | null> {
   });
 }
 
-function loadLogo_(src: string): Promise<LoadedLogo | null> {
-  return new Promise((resolve) => {
-    try {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) return resolve(null);
-          ctx.drawImage(img, 0, 0);
-          resolve({ dataUrl: canvas.toDataURL("image/png"), width: img.naturalWidth, height: img.naturalHeight });
-        } catch { resolve(null); }
-      };
-      img.onerror = () => resolve(null);
-      img.src = src;
-    } catch { resolve(null); }
-  });
-}
-
 type LoadedImage = { dataUrl: string; width: number; height: number };
 
 // Fetch a (possibly remote/signed-URL) image and convert it to a base64
@@ -159,7 +137,7 @@ async function generateMomPdf(mom: MOM) {
   const CLIENT_TX: [number, number, number] = [60, 60, 60];
   const ORANGE_LIGHT: [number, number, number] = [253, 238, 229];
 
-  const [logo, seal] = await Promise.all([loadLogo(), loadLogo_("/od-seal.png")]);
+  const logo = await loadLogo();
   const regularPhotos = mom.photos.filter((p) => p.kind !== "handover_doc");
   const handoverDocs = mom.photos.filter((p) => p.kind === "handover_doc");
   const loadedPhotos = await Promise.all(regularPhotos.map((p) => loadImage(p.url)));
@@ -510,11 +488,6 @@ async function generateMomPdf(mom: MOM) {
     doc.setFont("times", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...MID);
-    if (seal) {
-      const sH = 10;
-      const sW = (seal.width / seal.height) * sH;
-      doc.addImage(seal.dataUrl, "PNG", margin, footerY - sH + 2, sW, sH);
-    }
     doc.text("www.okiedokiepay.com", pageWidth / 2, footerY, { align: "center" });
     doc.text(`Page ${i} of ${pages}`, pageWidth - margin, footerY, { align: "right" });
   }
