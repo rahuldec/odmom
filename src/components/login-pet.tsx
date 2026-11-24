@@ -1,34 +1,31 @@
 import { useEffect, useRef } from "react";
 
 interface LoginPetProps {
-  /** "number" = eyes follow input length, "password" = eyes covered, "idle" = forward */
   mode: "number" | "password" | "idle";
-  /** 0–10, used to shift gaze left→right as digits are typed */
-  progress: number;
+  progress: number; // 0–10
 }
 
 export function LoginPet({ mode, progress }: LoginPetProps) {
   const leftPupilRef = useRef<SVGCircleElement>(null);
   const rightPupilRef = useRef<SVGCircleElement>(null);
+  const leftShineRef = useRef<SVGCircleElement>(null);
+  const rightShineRef = useRef<SVGCircleElement>(null);
 
   useEffect(() => {
     if (mode !== "number") return;
-    // Map progress 0–10 to x offset -4..+4 and slight y dip
-    const t = progress / 10; // 0..1
+    const t = progress / 10;
     const x = -4 + t * 8;
-    const y = Math.sin(t * Math.PI) * 2; // slight arc
-
-    [leftPupilRef, rightPupilRef].forEach((ref) => {
-      if (ref.current) {
-        ref.current.style.transform = `translate(${x}px, ${y}px)`;
-      }
+    const y = Math.sin(t * Math.PI) * 1.5;
+    const transform = `translate(${x}px, ${y}px)`;
+    [leftPupilRef, rightPupilRef, leftShineRef, rightShineRef].forEach((ref) => {
+      if (ref.current) ref.current.style.transform = transform;
     });
   }, [mode, progress]);
 
   useEffect(() => {
     if (mode === "idle") {
-      [leftPupilRef, rightPupilRef].forEach((ref) => {
-        if (ref.current) ref.current.style.transform = "translate(0px, 0px)";
+      [leftPupilRef, rightPupilRef, leftShineRef, rightShineRef].forEach((ref) => {
+        if (ref.current) ref.current.style.transform = "translate(0px,0px)";
       });
     }
   }, [mode]);
@@ -36,80 +33,81 @@ export function LoginPet({ mode, progress }: LoginPetProps) {
   const coverEyes = mode === "password";
 
   return (
-    <svg
-      viewBox="0 0 120 120"
-      width="110"
-      height="110"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* ── Body ── */}
-      <ellipse cx="60" cy="78" rx="30" ry="34" fill="#f97316" />
+    <svg viewBox="0 0 120 130" width="110" height="120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 
-      {/* ── Belly ── */}
-      <ellipse cx="60" cy="84" rx="18" ry="22" fill="#fed7aa" />
-
-      {/* ── Wings ── */}
-      <ellipse cx="28" cy="82" rx="12" ry="20" fill="#ea580c" transform="rotate(-15 28 82)" />
-      <ellipse cx="92" cy="82" rx="12" ry="20" fill="#ea580c" transform="rotate(15 92 82)" />
+      {/* ── Floppy ears ── */}
+      <ellipse cx="28" cy="38" rx="16" ry="26" fill="#c2763a" transform="rotate(-10 28 38)" />
+      <ellipse cx="92" cy="38" rx="16" ry="26" fill="#c2763a" transform="rotate(10 92 38)" />
+      {/* inner ear */}
+      <ellipse cx="28" cy="40" rx="9" ry="18" fill="#e8a06a" transform="rotate(-10 28 40)" />
+      <ellipse cx="92" cy="40" rx="9" ry="18" fill="#e8a06a" transform="rotate(10 92 40)" />
 
       {/* ── Head ── */}
-      <circle cx="60" cy="48" r="28" fill="#f97316" />
+      <ellipse cx="60" cy="52" rx="34" ry="32" fill="#d4884a" />
 
-      {/* ── Ear tufts ── */}
-      <polygon points="40,24 34,8 46,20" fill="#ea580c" />
-      <polygon points="80,24 86,8 74,20" fill="#ea580c" />
+      {/* ── Snout ── */}
+      <ellipse cx="60" cy="66" rx="18" ry="13" fill="#e8b07a" />
 
       {/* ── Eye whites ── */}
-      <ellipse cx="47" cy="46" rx="11" ry="11" fill="white" />
-      <ellipse cx="73" cy="46" rx="11" ry="11" fill="white" />
+      <ellipse cx="45" cy="47" rx="11" ry="11" fill="white" />
+      <ellipse cx="75" cy="47" rx="11" ry="11" fill="white" />
 
-      {/* ── Pupils (animated) ── */}
+      {/* ── Pupils ── */}
       {!coverEyes && (
         <>
-          <circle
-            ref={leftPupilRef}
-            cx="47" cy="46" r="6"
-            fill="#1c1917"
-            style={{ transition: "transform 0.15s ease-out" }}
-          />
-          <circle
-            ref={rightPupilRef}
-            cx="73" cy="46" r="6"
-            fill="#1c1917"
-            style={{ transition: "transform 0.15s ease-out" }}
-          />
-          {/* Eye shine */}
-          <circle cx="50" cy="43" r="2" fill="white" style={{ pointerEvents: "none", transition: "transform 0.15s ease-out", transform: leftPupilRef.current?.style.transform }} />
-          <circle cx="76" cy="43" r="2" fill="white" style={{ pointerEvents: "none", transition: "transform 0.15s ease-out", transform: rightPupilRef.current?.style.transform }} />
+          <circle ref={leftPupilRef}  cx="45" cy="47" r="6.5" fill="#2d1a0e"
+            style={{ transition: "transform 0.15s ease-out" }} />
+          <circle ref={rightPupilRef} cx="75" cy="47" r="6.5" fill="#2d1a0e"
+            style={{ transition: "transform 0.15s ease-out" }} />
+          <circle ref={leftShineRef}  cx="47.5" cy="44.5" r="2" fill="white"
+            style={{ transition: "transform 0.15s ease-out" }} />
+          <circle ref={rightShineRef} cx="77.5" cy="44.5" r="2" fill="white"
+            style={{ transition: "transform 0.15s ease-out" }} />
         </>
       )}
 
-      {/* ── Covering paws (password mode) ── */}
+      {/* ── Paws covering eyes (password) ── */}
       {coverEyes && (
         <>
-          {/* left paw over left eye */}
-          <ellipse cx="47" cy="46" rx="13" ry="11" fill="#ea580c"
-            style={{ transition: "opacity 0.2s" }} />
-          <ellipse cx="39" cy="52" rx="5" ry="4" fill="#fed7aa" />
-          <ellipse cx="47" cy="55" rx="5" ry="4" fill="#fed7aa" />
-          <ellipse cx="55" cy="52" rx="5" ry="4" fill="#fed7aa" />
-
-          {/* right paw over right eye */}
-          <ellipse cx="73" cy="46" rx="13" ry="11" fill="#ea580c"
-            style={{ transition: "opacity 0.2s" }} />
-          <ellipse cx="65" cy="52" rx="5" ry="4" fill="#fed7aa" />
-          <ellipse cx="73" cy="55" rx="5" ry="4" fill="#fed7aa" />
-          <ellipse cx="81" cy="52" rx="5" ry="4" fill="#fed7aa" />
+          {/* left paw */}
+          <ellipse cx="45" cy="50" rx="13" ry="10" fill="#c2763a" />
+          <ellipse cx="37" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
+          <ellipse cx="45" cy="59" rx="5.5" ry="4.5" fill="#d4884a" />
+          <ellipse cx="53" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
+          {/* right paw */}
+          <ellipse cx="75" cy="50" rx="13" ry="10" fill="#c2763a" />
+          <ellipse cx="67" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
+          <ellipse cx="75" cy="59" rx="5.5" ry="4.5" fill="#d4884a" />
+          <ellipse cx="83" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
         </>
       )}
 
-      {/* ── Beak ── */}
-      <polygon points="60,52 54,58 66,58" fill="#fb923c" />
+      {/* ── Nose ── */}
+      <ellipse cx="60" cy="62" rx="7" ry="5" fill="#3d1f0a" />
+      {/* nose shine */}
+      <ellipse cx="58" cy="60.5" rx="2.5" ry="1.5" fill="#6b3a1f" opacity="0.6" />
 
-      {/* ── Feet ── */}
-      <ellipse cx="48" cy="109" rx="10" ry="5" fill="#ea580c" />
-      <ellipse cx="72" cy="109" rx="10" ry="5" fill="#ea580c" />
+      {/* ── Mouth ── */}
+      <path d="M54,67 Q60,73 66,67" stroke="#3d1f0a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+
+      {/* ── Tongue ── */}
+      <ellipse cx="60" cy="72" rx="6" ry="5" fill="#f87171" />
+      <line x1="60" y1="68" x2="60" y2="77" stroke="#f43f5e" strokeWidth="1" />
+
+      {/* ── Body ── */}
+      <ellipse cx="60" cy="104" rx="26" ry="22" fill="#d4884a" />
+      {/* belly */}
+      <ellipse cx="60" cy="108" rx="16" ry="14" fill="#e8b07a" />
+
+      {/* ── Front paws ── */}
+      <ellipse cx="40" cy="122" rx="10" ry="6" fill="#c2763a" />
+      <ellipse cx="80" cy="122" rx="10" ry="6" fill="#c2763a" />
+
+      {/* ── Tail (wagging hint) ── */}
+      <path d="M84,96 Q100,82 96,70" stroke="#c2763a" strokeWidth="8" fill="none"
+        strokeLinecap="round" />
+      <circle cx="96" cy="70" r="5" fill="#c2763a" />
+
     </svg>
   );
 }
