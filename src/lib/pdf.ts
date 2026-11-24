@@ -464,19 +464,6 @@ async function generateMomPdf(mom: MOM) {
   ensureSpace(100);
   y += 10;
 
-  doc.setFont("times", "bold");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...CHARCOAL);
-  doc.text("Regards,", margin, y);
-  y += 13;
-  doc.setFont("times", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...DARK);
-  doc.text("Team Okie Dokie", margin, y);
-  y += 11;
-  doc.text("Your Campus Automation Partner", margin, y);
-  y += 38;
-
   const sigW = (contentW - 40) / 2;
   doc.setDrawColor(...RULE);
   doc.setLineWidth(0.5);
