@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { ArrowUpRight, CheckSquare, LayoutDashboard, LogOut, Menu, Plus, Rows3, User } from "lucide-react";
+import { ArrowUpRight, CheckSquare, FolderOpen, LayoutDashboard, LogOut, Menu, Plus, Rows3, User } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,7 @@ import logoUrl from "@/logo.png";
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/meetings", label: "Meetings", icon: Rows3 },
+  { to: "/resources", label: "Resources", icon: FolderOpen },
 ] as const;
 
 const CHECKLIST_URL = "https://odchecklist.lovable.app/";
