@@ -26,7 +26,11 @@ const attendeeSchema = z.object({
   team: z.enum(["client", "okie_dokie"]).default("client"),
 });
 const dpSchema = z.object({ module: z.string(), details: z.string() });
-const wcSchema = z.object({ module: z.string(), task: z.string() });
+const wcSchema = z.object({
+  module: z.string(),
+  task: z.string(),
+  form_signed: z.enum(["query_resolution", "handover"]).nullable().optional(),
+});
 const ppSchema = z.object({
   module: z.string(),
   requirement: z.string(),

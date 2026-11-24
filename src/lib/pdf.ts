@@ -404,9 +404,28 @@ async function generateMomPdf(mom: MOM) {
     section("Work Completed");
     autoTable(doc, {
       startY: y,
-      head: [["Module", "Task Completed"]],
-      body: mom.work_completed.map((w) => [w.module, w.task]),
-      columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" } },
+      head: [["Module", "Task Completed", "Form Signed"]],
+      body: mom.work_completed.map((w) => {
+        const formLabel =
+          w.form_signed === "query_resolution"
+            ? "Query Resolution Form"
+            : w.form_signed === "handover"
+              ? "Handover Document Form"
+              : "—";
+        return [w.module, w.task, formLabel];
+      }),
+      columnStyles: {
+        0: { cellWidth: 110, fontStyle: "bold" },
+        2: { cellWidth: 130, halign: "center" },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 2 && String(data.cell.raw) !== "—") {
+          data.cell.styles.fillColor = ORANGE_LIGHT as [number, number, number];
+          data.cell.styles.textColor = MAROON as [number, number, number];
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fontSize = 8;
+        }
+      },
       ...tableTheme,
     });
     // @ts-expect-error autotable

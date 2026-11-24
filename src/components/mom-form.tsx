@@ -55,6 +55,7 @@ import {
   type PendingWith,
   type MomPhoto,
   type PendingAttachment,
+  type FormSigned,
 } from "@/lib/mom-types";
 
 type Props = {
@@ -674,24 +675,46 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
               }
               removeLabel={`Remove task ${i + 1}`}
             >
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[190px_1fr]">
-                <ModuleSelect
-                  value={w.module}
-                  onChange={(m) => {
-                    const copy = form.work_completed.slice();
-                    copy[i] = { ...w, module: m };
-                    update("work_completed", copy);
-                  }}
-                />
-                <Input
-                  placeholder="What was completed"
-                  value={w.task}
-                  onChange={(e) => {
-                    const copy = form.work_completed.slice();
-                    copy[i] = { ...w, task: e.target.value };
-                    update("work_completed", copy);
-                  }}
-                />
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-[190px_1fr]">
+                  <ModuleSelect
+                    value={w.module}
+                    onChange={(m) => {
+                      const copy = form.work_completed.slice();
+                      copy[i] = { ...w, module: m };
+                      update("work_completed", copy);
+                    }}
+                  />
+                  <Input
+                    placeholder="What was completed"
+                    value={w.task}
+                    onChange={(e) => {
+                      const copy = form.work_completed.slice();
+                      copy[i] = { ...w, task: e.target.value };
+                      update("work_completed", copy);
+                    }}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">Form signed?</span>
+                  <Select
+                    value={w.form_signed ?? "none"}
+                    onValueChange={(v) => {
+                      const copy = form.work_completed.slice();
+                      copy[i] = { ...w, form_signed: (v === "none" ? null : v) as FormSigned };
+                      update("work_completed", copy);
+                    }}
+                  >
+                    <SelectTrigger className="w-64" aria-label="Form signed">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No form signed</SelectItem>
+                      <SelectItem value="query_resolution">Query Resolution Form</SelectItem>
+                      <SelectItem value="handover">Handover Document Form</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </Row>
           ))}

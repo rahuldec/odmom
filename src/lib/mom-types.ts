@@ -6,7 +6,8 @@ export type Attendee = {
   team: AttendeeTeam;
 };
 export type DiscussionPoint = { module: string; details: string };
-export type WorkCompletedItem = { module: string; task: string };
+export type FormSigned = "query_resolution" | "handover" | null;
+export type WorkCompletedItem = { module: string; task: string; form_signed?: FormSigned };
 export type PendingWith = "okie_dokie" | "cs" | "client";
 export type PendingAttachment = { path: string; url: string; name?: string };
 export type PendingPoint = {
