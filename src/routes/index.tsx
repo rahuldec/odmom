@@ -317,7 +317,7 @@ function DashboardPage() {
               <p className="eyebrow mb-1">Resources</p>
               <h2 className="font-display text-base font-semibold">Downloads</h2>
             </div>
-            <div className="px-5 py-4">
+            <div className="flex flex-col gap-2 px-5 py-4">
               <a
                 href="/ERP_Module_Handover_Template.pdf"
                 download="ERP Module Handover Document.pdf"
@@ -325,6 +325,15 @@ function DashboardPage() {
               >
                 <FileText className="h-4 w-4 shrink-0 text-primary" />
                 <span className="flex-1">ERP Module Handover Document</span>
+                <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </a>
+              <a
+                href="/ERP_Query_Resolution_Form.pdf"
+                download="ERP Query Resolution Form.pdf"
+                className="inline-flex items-center gap-2.5 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted hover:text-primary"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                <span className="flex-1">ERP Query Resolution / Escalation Form</span>
                 <Download className="h-4 w-4 shrink-0 text-muted-foreground" />
               </a>
             </div>
