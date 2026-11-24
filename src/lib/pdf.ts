@@ -122,113 +122,111 @@ async function generateMomPdf(mom: MOM) {
   const contentW = pageWidth - margin * 2;
 
   // ── Palette ────────────────────────────────────────────────────────────
-  // Taken off the Okie Dokie seal so the PDF the client receives matches the
-  // portal it was written in: maroon ring lettering, orange disc, gold stars.
-  const MAROON: [number, number, number] = [124, 29, 19]; // #7C1D13
-  const MAROON_DEEP: [number, number, number] = [90, 19, 12]; // #5A130C
-  const ORANGE: [number, number, number] = [238, 103, 35]; // #EE6723
-  const ORANGE_LIGHT: [number, number, number] = [253, 238, 229]; // #FDEEE5
+  // A formal monochrome layout follows the uploaded meeting-record example.
   const WHITE: [number, number, number] = [255, 255, 255];
-  const SLATE: [number, number, number] = [138, 106, 97]; // warm muted ink
-  const SLATE_LIGHT: [number, number, number] = [232, 201, 191]; // muted on maroon
-  const INK: [number, number, number] = [42, 22, 19]; // #2A1613
-  const LINE: [number, number, number] = [237, 223, 215]; // #EDDFD7
-  const ROW_TINT: [number, number, number] = [251, 246, 242]; // #FBF6F2
-  // Gold means one thing here and in the portal: waiting on Okie Dokie.
-  const GOLD: [number, number, number] = [255, 222, 86]; // #FFDE56 the seal's stars
-  const GOLD_BG: [number, number, number] = [255, 243, 199];
-  const GOLD_TX: [number, number, number] = [124, 86, 0];
-  const NEUTRAL_BG: [number, number, number] = [242, 234, 228];
-  const NEUTRAL_TX: [number, number, number] = [107, 85, 77];
+  const SLATE: [number, number, number] = [95, 95, 95];
+  const INK: [number, number, number] = [25, 25, 25];
+  const LINE: [number, number, number] = [185, 185, 185];
+  const ROW_TINT: [number, number, number] = [247, 247, 247];
 
   const logo = await loadLogo();
   const regularPhotos = mom.photos.filter((p) => p.kind !== "handover_doc");
   const handoverDocs = mom.photos.filter((p) => p.kind === "handover_doc");
   const loadedPhotos = await Promise.all(regularPhotos.map((p) => loadImage(p.url)));
 
-  // ── HEADER (drawn on every page) ─────────────────────────────────────
-  const headerH = 96;
+  // ── HEADER (repeated on every page) ───────────────────────────────────
+  const headerH = 62;
 
   const drawHeader = () => {
-    doc.setFillColor(...MAROON);
-    doc.rect(0, 0, pageWidth, headerH, "F");
-
-    doc.setFillColor(...MAROON_DEEP);
-    doc.rect(0, headerH - 8, pageWidth, 8, "F");
-
-    doc.setFillColor(...ORANGE);
-    doc.rect(pageWidth - 130, 0, 130, 4, "F");
-
-    const logoSize = 40;
-    const logoX = margin;
-    const logoY = (headerH - logoSize) / 2 - 2;
     if (logo) {
-      // The source PNG has a transparent (not white) background outside its
-      // colored strokes, so on the maroon header those "white" areas show the
-      // maroon through them. Paint a white backing disc sized to the badge's
-      // visible ring (~39% of the image box) before placing the logo.
-      const cx = logoX + logoSize / 2;
-      const cy = logoY + logoSize / 2;
-      doc.setFillColor(...WHITE);
-      doc.circle(cx, cy, logoSize * 0.41, "F");
-      doc.addImage(logo.dataUrl, "PNG", logoX, logoY, logoSize, logoSize);
+      const logoSize = 34;
+      doc.addImage(logo.dataUrl, "PNG", margin, 10, logoSize, logoSize);
     }
 
-    const textX = logo ? logoX + logoSize + 14 : margin;
-
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(...WHITE);
-    doc.text("OKIE DOKIE SOLUTIONS", textX, headerH / 2 - 6);
-
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    doc.setTextColor(...SLATE_LIGHT);
-    doc.text("www.okiedokiepay.com   ·   services@okiedokiepay.com", textX, headerH / 2 + 10);
+    doc.setTextColor(...INK);
+    doc.text("OKIE DOKIE  |  YOUR CAMPUS AUTOMATION PARTNER", pageWidth / 2, 24, {
+      align: "center",
+    });
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...GOLD);
-    doc.text("MINUTES OF MEETING", pageWidth - margin, headerH / 2 + 3, { align: "right" });
+    doc.setDrawColor(...INK);
+    doc.setLineWidth(0.8);
+    doc.line(margin, 52, pageWidth - margin, 52);
   };
 
-  drawHeader();
+  // ── Title and meeting information ─────────────────────────────────────
+  let y = headerH + 24;
 
-  // ── Title strip ───────────────────────────────────────────────────────
-  let y = headerH + 30;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(19);
+  doc.setTextColor(...INK);
+  doc.text("MINUTES OF MEETING", pageWidth / 2, y, { align: "center" });
+  y += 19;
 
-  // Draw the date first so the title can be wrapped inside whatever width is
-  // left — long institute names used to run straight through it.
-  const dateLabel = formatDate(mom.meeting_date);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...SLATE);
-  doc.text(dateLabel, pageWidth - margin, y, { align: "right" });
-  const dateW = doc.getTextWidth(dateLabel);
+  doc.text("Client Visit & Action Plan", pageWidth / 2, y, { align: "center" });
+  y += 22;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(...INK);
-  const titleLines: string[] = doc.splitTextToSize(
-    `Meeting with ${mom.client_name}`,
-    contentW - dateW - 18,
-  );
-  doc.text(titleLines, margin, y);
-  y += (titleLines.length - 1) * 21;
+  const dateLabel = formatDate(mom.meeting_date);
+  const meetingType = mom.meeting_type === "online" ? "Online Meeting" : "Physical Visit";
+  autoTable(doc, {
+    startY: y,
+    body: [
+      [
+        { content: "School", styles: { fontStyle: "bold" } },
+        mom.client_name,
+        { content: "Date", styles: { fontStyle: "bold" } },
+        dateLabel,
+      ],
+      [
+        { content: "Meeting Type", styles: { fontStyle: "bold" } },
+        meetingType,
+        { content: "Prepared by", styles: { fontStyle: "bold" } },
+        mom.employee_name,
+      ],
+    ],
+    theme: "plain",
+    styles: {
+      font: "helvetica",
+      fontSize: 9.5,
+      cellPadding: { top: 5, bottom: 5, left: 0, right: 4 },
+      textColor: INK,
+      overflow: "linebreak",
+      valign: "top",
+    },
+    columnStyles: {
+      0: { cellWidth: 58 },
+      1: { cellWidth: 190 },
+      2: { cellWidth: 58 },
+      3: { cellWidth: 205 },
+    },
+    margin: { left: margin, right: margin, top: headerH + 20, bottom: 48 },
+  });
+  // @ts-expect-error autotable
+  y = doc.lastAutoTable.finalY + 7;
 
-  y += 8;
-  doc.setDrawColor(...ORANGE);
-  doc.setLineWidth(2);
-  doc.line(margin, y, margin + 46, y);
-  y += 26;
+  if (mom.location?.trim()) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    doc.text("Venue:", margin, y);
+    doc.setFont("helvetica", "normal");
+    const venueLines: string[] = doc.splitTextToSize(mom.location.trim(), contentW - 42);
+    doc.text(venueLines, margin + 42, y);
+    y += Math.max(13, venueLines.length * 12) + 8;
+  } else {
+    y += 5;
+  }
 
   // ── Section helper ────────────────────────────────────────────────────
   let sectionNo = 0;
   const ensureSpace = (needed: number) => {
     if (y + needed > pageHeight - 56) {
       doc.addPage();
-      drawHeader();
-      y = headerH + 34;
+      y = headerH + 28;
     }
   };
 
@@ -236,26 +234,16 @@ async function generateMomPdf(mom: MOM) {
     sectionNo += 1;
     ensureSpace(34);
 
-    const chipSize = 18;
-    doc.setFillColor(...MAROON);
-    doc.roundedRect(margin, y - 13, chipSize, chipSize, 3, 3, "F");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...WHITE);
-    doc.text(String(sectionNo).padStart(2, "0"), margin + chipSize / 2, y - 13 + chipSize / 2 + 3, {
-      align: "center",
-    });
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text(`${sectionNo}. ${title.toUpperCase()}`, margin, y);
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11.5);
-    doc.setTextColor(...MAROON);
-    doc.text(title.toUpperCase(), margin + chipSize + 10, y);
-
-    y += 8;
-    doc.setDrawColor(...LINE);
-    doc.setLineWidth(0.75);
+    y += 7;
+    doc.setDrawColor(...INK);
+    doc.setLineWidth(0.65);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 16;
+    y += 14;
     doc.setTextColor(...INK);
   };
 
@@ -269,112 +257,97 @@ async function generateMomPdf(mom: MOM) {
       valign: "middle" as const,
     },
     headStyles: {
-      fillColor: MAROON as [number, number, number],
+      fillColor: [35, 35, 35] as [number, number, number],
       textColor: WHITE as [number, number, number],
       fontStyle: "bold" as const,
       fontSize: 8.5,
       cellPadding: { top: 8, bottom: 8, left: 8, right: 8 },
     },
     alternateRowStyles: { fillColor: ROW_TINT as [number, number, number] },
-    margin: { left: margin, right: margin },
+    margin: { top: headerH + 20, bottom: 50, left: margin, right: margin },
   };
 
-  const teamBadge = (team: "okie_dokie" | "cs" | "client") =>
-    team === "okie_dokie" ? "Okie Dokie Team" : team === "cs" ? "CS Team" : "Client";
+  // ── Attendees ───────────────────────────────────────────────────────────
+  if (mom.attendees.length) {
+    section("Attendees");
+    const attendeesFor = (team: "client" | "okie_dokie") =>
+      mom.attendees
+        .filter((attendee) => attendee.team === team)
+        .map((attendee) =>
+          attendee.designation
+            ? `${attendee.name} — ${attendee.designation}`
+            : attendee.name,
+        )
+        .join("\n") || "—";
 
-  // ── Discussion Points ───────────────────────────────────────────────────
-  if (mom.discussion_points.length) {
-    section("Discussion Points");
     autoTable(doc, {
       startY: y,
-      head: [["Module", "Details"]],
-      body: mom.discussion_points.map((d) => [d.module, d.details]),
-      columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" } },
-      ...tableTheme,
+      head: [["School Representatives", "Okie Dokie Representatives"]],
+      body: [[attendeesFor("client"), attendeesFor("okie_dokie")]],
+      columnStyles: {
+        0: { cellWidth: contentW / 2 },
+        1: { cellWidth: contentW / 2 },
+      },
+      styles: {
+        ...tableTheme.styles,
+        fontSize: 9,
+        cellPadding: { top: 8, bottom: 8, left: 8, right: 8 },
+        valign: "top",
+      },
+      headStyles: {
+        ...tableTheme.headStyles,
+        fontSize: 8.5,
+        cellPadding: { top: 7, bottom: 7, left: 8, right: 8 },
+      },
+      margin: tableTheme.margin,
     });
     // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 24;
+    y = doc.lastAutoTable.finalY + 22;
   }
 
-  // ── Pending Points ──────────────────────────────────────────────────────
-  if (mom.pending_points.length) {
-    section("Pending Points");
-    autoTable(doc, {
-      startY: y,
-      head: [["Module", "Requirement", "Pending With", "Due Date"]],
-      body: mom.pending_points.map((p) => {
-        const badge =
-          p.pending_with === "okie_dokie"
-            ? "Tech Team"
-            : p.pending_with === "cs"
-              ? "CS Team"
-              : "Client";
-        const dueDate =
-          p.pending_with === "okie_dokie"
-            ? "Date will be given after discussing with tech"
-            : p.due_date
-              ? formatDate(p.due_date)
-              : "—";
-        return [p.module, p.requirement, badge, dueDate];
-      }),
-      columnStyles: {
-        0: { cellWidth: 90, fontStyle: "bold" },
-        2: { cellWidth: 80, halign: "center" },
-        3: { cellWidth: 110 },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 2) {
-          const val = String(data.cell.raw);
-          const isTech = val === "Tech Team";
-          const isCs = val === "CS Team";
-          data.cell.styles.fillColor = isTech ? GOLD_BG : isCs ? ORANGE_LIGHT : NEUTRAL_BG;
-          data.cell.styles.textColor = isTech ? GOLD_TX : isCs ? MAROON : NEUTRAL_TX;
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fontSize = 8;
-        }
-        if (data.section === "body" && data.column.index === 3 && String(data.cell.raw).startsWith("Date will")) {
-          data.cell.styles.textColor = SLATE as [number, number, number];
-          data.cell.styles.fontStyle = "italic";
-          data.cell.styles.fontSize = 7.5;
-        }
-      },
-      ...tableTheme,
-    });
-    // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 24;
-  }
+  // ── Discussion Points & Action Plan ────────────────────────────────────
+  const actionRows = [
+    ...mom.discussion_points.map((point) => [
+      point.module,
+      `Discussion — ${point.details}`,
+      "—",
+      "—",
+    ]),
+    ...mom.work_completed.map((work) => [
+      work.module,
+      `Completed — ${work.task}`,
+      mom.employee_name || "Okie Dokie Team",
+      "—",
+    ]),
+    ...mom.pending_points.map((point) => [
+      point.module,
+      `Pending — ${point.requirement}`,
+      point.pending_with === "okie_dokie"
+        ? "Okie Dokie Team"
+        : point.pending_with === "cs"
+          ? "CS Team"
+          : "Client",
+      point.due_date ? formatDate(point.due_date) : "—",
+    ]),
+  ];
 
-  // ── Work Completed ──────────────────────────────────────────────────────
-  if (mom.work_completed.length) {
-    section("Work Completed");
+  if (actionRows.length) {
+    section("Discussion Points & Action Plan");
     autoTable(doc, {
       startY: y,
-      head: [["Module", "Task Completed", "Form Signed"]],
-      body: mom.work_completed.map((w) => {
-        const formLabel =
-          w.form_signed === "query_resolution"
-            ? "Query Resolution Form"
-            : w.form_signed === "handover"
-              ? "Handover Document Form"
-              : "—";
-        return [w.module, w.task, formLabel];
-      }),
+      head: [["Module / Activity", "Action Item", "Responsibility", "Target Date"]],
+      body: actionRows,
       columnStyles: {
-        0: { cellWidth: 110, fontStyle: "bold" },
-        2: { cellWidth: 130, halign: "center" },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 2 && String(data.cell.raw) !== "—") {
-          data.cell.styles.fillColor = ORANGE_LIGHT as [number, number, number];
-          data.cell.styles.textColor = MAROON as [number, number, number];
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fontSize = 8;
-        }
+        0: { cellWidth: 92, fontStyle: "bold" },
+        2: { cellWidth: 92 },
+        3: { cellWidth: 68 },
       },
       ...tableTheme,
+      styles: { ...tableTheme.styles, fontSize: 8.5 },
+      headStyles: { ...tableTheme.headStyles, fontSize: 8 },
     });
     // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 24;
+    y = doc.lastAutoTable.finalY + 22;
   }
 
   // ── Handover Documents ───────────────────────────────────────────────────
@@ -444,40 +417,6 @@ async function generateMomPdf(mom: MOM) {
     }
   }
 
-  // ── Attendees ──────────────────────────────────────────────────────────
-  if (mom.attendees.length) {
-    section("Attendees");
-    autoTable(doc, {
-      startY: y,
-      head: [["Name", "Designation", "Team"]],
-      body: mom.attendees.map((a) => [a.name, a.designation, teamBadge(a.team)]),
-      columnStyles: { 2: { halign: "center", cellWidth: 110 } },
-      styles: {
-        ...tableTheme.styles,
-        fontSize: 8.5,
-        cellPadding: { top: 5, bottom: 5, left: 8, right: 8 },
-      },
-      headStyles: {
-        ...tableTheme.headStyles,
-        fontSize: 8,
-        cellPadding: { top: 6, bottom: 6, left: 8, right: 8 },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 2) {
-          const isOdc = String(data.cell.raw) === "Okie Dokie Team";
-          data.cell.styles.fillColor = isOdc ? ORANGE_LIGHT : NEUTRAL_BG;
-          data.cell.styles.textColor = isOdc ? MAROON : NEUTRAL_TX;
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fontSize = 7.5;
-        }
-      },
-      alternateRowStyles: tableTheme.alternateRowStyles,
-      margin: tableTheme.margin,
-    });
-    // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 24;
-  }
-
   // ── Signature block ──────────────────────────────────────────────────────
   ensureSpace(90);
   y += 14;
@@ -493,11 +432,17 @@ async function generateMomPdf(mom: MOM) {
   doc.setTextColor(...INK);
   doc.text(mom.employee_name, margin, sigY + 62);
   doc.text(mom.client_name, margin + sigW + 30, sigY + 62);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...SLATE);
+  doc.text("Okie Dokie Representative", margin, sigY + 75);
+  doc.text("School Representative", margin + sigW + 30, sigY + 75);
 
   // ── Footer (every page) ──────────────────────────────────────────────────
   const pages = doc.getNumberOfPages();
   for (let i = 1; i <= pages; i++) {
     doc.setPage(i);
+    drawHeader();
     const footerY = pageHeight - 28;
     doc.setDrawColor(...LINE);
     doc.setLineWidth(0.5);
@@ -506,7 +451,7 @@ async function generateMomPdf(mom: MOM) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...SLATE);
-    doc.text("www.okiedokiepay.com  ·  services@okiedokiepay.com", pageWidth / 2, footerY, {
+    doc.text("www.okiedokiepay.com  |  services@okiedokiepay.com", pageWidth / 2, footerY, {
       align: "center",
     });
     doc.text(`Page ${i} of ${pages}`, pageWidth - margin, footerY, { align: "right" });

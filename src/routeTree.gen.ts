@@ -9,27 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MeetingsRouteImport } from './routes/meetings'
+import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as EditIdRouteImport } from './routes/edit.$id'
 import { Route as MomIdRouteImport } from './routes/mom.$id'
 import { Route as MomNewRouteImport } from './routes/mom.new'
 import { Route as ApiPublicMomsRouteImport } from './routes/api/public/moms'
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MeetingsRoute = MeetingsRouteImport.update({
   id: '/meetings',
   path: '/meetings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditIdRoute = EditIdRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/meetings': typeof MeetingsRoute
+  '/resources': typeof ResourcesRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/meetings': typeof MeetingsRoute
+  '/resources': typeof ResourcesRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/meetings': typeof MeetingsRoute
+  '/resources': typeof ResourcesRoute
   '/edit/$id': typeof EditIdRoute
   '/mom/$id': typeof MomIdRoute
   '/mom/new': typeof MomNewRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/meetings'
+    | '/resources'
     | '/edit/$id'
     | '/mom/$id'
     | '/mom/new'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/meetings'
+    | '/resources'
     | '/edit/$id'
     | '/mom/$id'
     | '/mom/new'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/meetings'
+    | '/resources'
     | '/edit/$id'
     | '/mom/$id'
     | '/mom/new'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   MeetingsRoute: typeof MeetingsRoute
+  ResourcesRoute: typeof ResourcesRoute
   EditIdRoute: typeof EditIdRoute
   MomIdRoute: typeof MomIdRoute
   MomNewRoute: typeof MomNewRoute
@@ -130,11 +143,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/meetings': {
       id: '/meetings'
       path: '/meetings'
       fullPath: '/meetings'
       preLoaderRoute: typeof MeetingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/edit/$id': {
@@ -172,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   MeetingsRoute: MeetingsRoute,
+  ResourcesRoute: ResourcesRoute,
   EditIdRoute: EditIdRoute,
   MomIdRoute: MomIdRoute,
   MomNewRoute: MomNewRoute,
