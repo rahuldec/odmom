@@ -134,11 +134,13 @@ function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
-          <Seal
-            className="h-24 w-24 text-primary"
-            topText="MOM PORTAL"
-            bottomText="OKIE DOKIE"
-          />
+          <div className="rounded-full bg-white p-2 shadow-sm">
+            <Seal
+              className="h-24 w-24 text-primary"
+              topText="MOM PORTAL"
+              bottomText="OKIE DOKIE"
+            />
+          </div>
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">MOM Portal</h1>
             <p className="mt-1 text-sm text-muted-foreground">Okie Dokie · Campus Automation</p>
