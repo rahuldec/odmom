@@ -484,7 +484,7 @@ async function generateMomPdf(mom: MOM) {
     doc.setFont("times", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...MID);
-    doc.text("Okie Dokie  ·  www.okiedokiepay.com", pageWidth / 2, footerY, { align: "center" });
+    doc.text("www.okiedokiepay.com", pageWidth / 2, footerY, { align: "center" });
     doc.text(`Page ${i} of ${pages}`, pageWidth - margin, footerY, { align: "right" });
   }
 
