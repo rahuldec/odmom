@@ -195,7 +195,7 @@ async function generateMomPdf(mom: MOM) {
   const col2X = pageWidth / 2 + 10;
 
   const infoRows: [string, string, string, string][] = [
-    ["School", mom.client_name, "Employee", mom.employee_name],
+    ["Institution", mom.client_name, "Employee", mom.employee_name],
     ["Date", formatDate(mom.meeting_date), "Meeting Type", mom.meeting_type === "online" ? "Online" : "On site"],
   ];
 
