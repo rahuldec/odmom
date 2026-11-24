@@ -1,113 +1,112 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface LoginPetProps {
   mode: "number" | "password" | "idle";
   progress: number; // 0–10
 }
 
+const STYLES = `
+@keyframes pet-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes pet-enter {
+  0%   { transform: translateY(30px) scale(0.8); opacity: 0; }
+  60%  { transform: translateY(-8px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0px) scale(1); opacity: 1; }
+}
+@keyframes paws-up {
+  0%   { transform: translateY(40px) scale(0.9); opacity: 0; }
+  50%  { transform: translateY(-6px) scale(1.03); opacity: 1; }
+  100% { transform: translateY(0px) scale(1); opacity: 1; }
+}
+@keyframes paws-down {
+  0%   { transform: translateY(0px); opacity: 1; }
+  100% { transform: translateY(40px) scale(0.9); opacity: 0; }
+}
+@keyframes pet-peek {
+  0%,100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-3deg); }
+  75%      { transform: rotate(3deg); }
+}
+`;
+
 export function LoginPet({ mode, progress }: LoginPetProps) {
-  const leftPupilRef = useRef<SVGCircleElement>(null);
-  const rightPupilRef = useRef<SVGCircleElement>(null);
-  const leftShineRef = useRef<SVGCircleElement>(null);
-  const rightShineRef = useRef<SVGCircleElement>(null);
+  const [prevMode, setPrevMode] = useState(mode);
+  const [coverVisible, setCoverVisible] = useState(false);
+  const [covering, setCovering] = useState(false);
+  const [uncovering, setUncovering] = useState(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (mode !== "number") return;
-    const t = progress / 10;
-    const x = -4 + t * 8;
-    const y = Math.sin(t * Math.PI) * 1.5;
-    const transform = `translate(${x}px, ${y}px)`;
-    [leftPupilRef, rightPupilRef, leftShineRef, rightShineRef].forEach((ref) => {
-      if (ref.current) ref.current.style.transform = transform;
-    });
-  }, [mode, progress]);
+    if (mode === prevMode) return;
 
-  useEffect(() => {
-    if (mode === "idle") {
-      [leftPupilRef, rightPupilRef, leftShineRef, rightShineRef].forEach((ref) => {
-        if (ref.current) ref.current.style.transform = "translate(0px,0px)";
-      });
+    if (mode === "password") {
+      setUncovering(false);
+      setCoverVisible(true);
+      setCovering(true);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    } else if (prevMode === "password") {
+      setCovering(false);
+      setUncovering(true);
+      hideTimer.current = setTimeout(() => {
+        setCoverVisible(false);
+        setUncovering(false);
+      }, 300);
     }
-  }, [mode]);
 
-  const coverEyes = mode === "password";
+    setPrevMode(mode);
+  }, [mode, prevMode]);
+
+  // Head tilt follows typing progress
+  const tilt = mode === "number" ? -8 + (progress / 10) * 16 : 0;
 
   return (
-    <svg viewBox="0 0 120 130" width="110" height="120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <>
+      <style>{STYLES}</style>
+      <div style={{ position: "relative", width: 180, height: 160, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
 
-      {/* ── Floppy ears ── */}
-      <ellipse cx="28" cy="38" rx="16" ry="26" fill="#c2763a" transform="rotate(-10 28 38)" />
-      <ellipse cx="92" cy="38" rx="16" ry="26" fill="#c2763a" transform="rotate(10 92 38)" />
-      {/* inner ear */}
-      <ellipse cx="28" cy="40" rx="9" ry="18" fill="#e8a06a" transform="rotate(-10 28 40)" />
-      <ellipse cx="92" cy="40" rx="9" ry="18" fill="#e8a06a" transform="rotate(10 92 40)" />
+        {/* Open-eyes dog — always rendered, tilts on number input */}
+        <img
+          src="/login-dog.png"
+          alt="Dog mascot"
+          style={{
+            position: "absolute",
+            bottom: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            animation: mode === "idle" ? "pet-float 3s ease-in-out infinite" : "none",
+            transform: `rotate(${tilt}deg)`,
+            transition: "transform 0.18s ease-out",
+            opacity: coverVisible ? 0 : 1,
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        />
 
-      {/* ── Head ── */}
-      <ellipse cx="60" cy="52" rx="34" ry="32" fill="#d4884a" />
-
-      {/* ── Snout ── */}
-      <ellipse cx="60" cy="66" rx="18" ry="13" fill="#e8b07a" />
-
-      {/* ── Eye whites ── */}
-      <ellipse cx="45" cy="47" rx="11" ry="11" fill="white" />
-      <ellipse cx="75" cy="47" rx="11" ry="11" fill="white" />
-
-      {/* ── Pupils ── */}
-      {!coverEyes && (
-        <>
-          <circle ref={leftPupilRef}  cx="45" cy="47" r="6.5" fill="#2d1a0e"
-            style={{ transition: "transform 0.15s ease-out" }} />
-          <circle ref={rightPupilRef} cx="75" cy="47" r="6.5" fill="#2d1a0e"
-            style={{ transition: "transform 0.15s ease-out" }} />
-          <circle ref={leftShineRef}  cx="47.5" cy="44.5" r="2" fill="white"
-            style={{ transition: "transform 0.15s ease-out" }} />
-          <circle ref={rightShineRef} cx="77.5" cy="44.5" r="2" fill="white"
-            style={{ transition: "transform 0.15s ease-out" }} />
-        </>
-      )}
-
-      {/* ── Paws covering eyes (password) ── */}
-      {coverEyes && (
-        <>
-          {/* left paw */}
-          <ellipse cx="45" cy="50" rx="13" ry="10" fill="#c2763a" />
-          <ellipse cx="37" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
-          <ellipse cx="45" cy="59" rx="5.5" ry="4.5" fill="#d4884a" />
-          <ellipse cx="53" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
-          {/* right paw */}
-          <ellipse cx="75" cy="50" rx="13" ry="10" fill="#c2763a" />
-          <ellipse cx="67" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
-          <ellipse cx="75" cy="59" rx="5.5" ry="4.5" fill="#d4884a" />
-          <ellipse cx="83" cy="57" rx="5.5" ry="4.5" fill="#d4884a" />
-        </>
-      )}
-
-      {/* ── Nose ── */}
-      <ellipse cx="60" cy="62" rx="7" ry="5" fill="#3d1f0a" />
-      {/* nose shine */}
-      <ellipse cx="58" cy="60.5" rx="2.5" ry="1.5" fill="#6b3a1f" opacity="0.6" />
-
-      {/* ── Mouth ── */}
-      <path d="M54,67 Q60,73 66,67" stroke="#3d1f0a" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-
-      {/* ── Tongue ── */}
-      <ellipse cx="60" cy="72" rx="6" ry="5" fill="#f87171" />
-      <line x1="60" y1="68" x2="60" y2="77" stroke="#f43f5e" strokeWidth="1" />
-
-      {/* ── Body ── */}
-      <ellipse cx="60" cy="104" rx="26" ry="22" fill="#d4884a" />
-      {/* belly */}
-      <ellipse cx="60" cy="108" rx="16" ry="14" fill="#e8b07a" />
-
-      {/* ── Front paws ── */}
-      <ellipse cx="40" cy="122" rx="10" ry="6" fill="#c2763a" />
-      <ellipse cx="80" cy="122" rx="10" ry="6" fill="#c2763a" />
-
-      {/* ── Tail (wagging hint) ── */}
-      <path d="M84,96 Q100,82 96,70" stroke="#c2763a" strokeWidth="8" fill="none"
-        strokeLinecap="round" />
-      <circle cx="96" cy="70" r="5" fill="#c2763a" />
-
-    </svg>
+        {/* Covered-eyes dog — fades in/out with bounce */}
+        {coverVisible && (
+          <img
+            src="/login-dog-cover.png"
+            alt=""
+            style={{
+              position: "absolute",
+              bottom: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              animation: covering
+                ? "paws-up 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards"
+                : uncovering
+                  ? "paws-down 0.3s ease-in forwards"
+                  : "none",
+              userSelect: "none",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+      </div>
+    </>
   );
 }
