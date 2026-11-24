@@ -26,107 +26,225 @@ function DogMascot({ eyesCovered }: { eyesCovered: boolean }) {
     position: "absolute" as const,
     top: 0,
     left: 0,
-    transition: "opacity 0.25s ease",
+    transition: "opacity 0.3s ease",
   };
+
+  const styles = `
+    @keyframes dogSway {
+      0%,100% { transform: rotate(-1.5deg) translateX(-1px); }
+      50%      { transform: rotate( 1.5deg) translateX( 1px); }
+    }
+    @keyframes tailWag {
+      0%,100% { transform: rotate(-28deg); }
+      50%      { transform: rotate( 28deg); }
+    }
+    @keyframes earBounceL {
+      0%,42%,46%,50%,100% { transform: rotate(-18deg) translateY(0px); }
+      44%,48% { transform: rotate(-18deg) translateY(-5px); }
+    }
+    @keyframes earBounceR {
+      0%,52%,56%,60%,100% { transform: rotate(18deg) translateY(0px); }
+      54%,58% { transform: rotate(18deg) translateY(-5px); }
+    }
+    @keyframes eyeBlink {
+      0%,90%,100% { transform: scaleY(1); }
+      92%,98%     { transform: scaleY(0.08); }
+    }
+    @keyframes tongueWag {
+      0%,100% { transform: rotate(-6deg); }
+      50%     { transform: rotate( 6deg); }
+    }
+    @keyframes blushPulse {
+      0%,100% { opacity: 0.38; }
+      50%     { opacity: 0.55; }
+    }
+    .dm-body  { transform-origin: 85px 160px; animation: dogSway 3.2s ease-in-out infinite; }
+    .dm-earL  { transform-box: view-box; transform-origin: 36px 68px; animation: earBounceL 4.8s ease-in-out infinite; }
+    .dm-earR  { transform-box: view-box; transform-origin: 134px 68px; animation: earBounceR 4.8s ease-in-out infinite; }
+    .dm-eyeL  { transform-box: fill-box; transform-origin: 50% 50%; animation: eyeBlink 5s ease-in-out infinite; }
+    .dm-eyeR  { transform-box: fill-box; transform-origin: 50% 50%; animation: eyeBlink 5s ease-in-out infinite 0.1s; }
+    .dm-tongue{ transform-box: view-box; transform-origin: 85px 115px; animation: tongueWag 1.3s ease-in-out infinite; }
+    .dm-blushL{ animation: blushPulse 2s ease-in-out infinite; }
+    .dm-blushR{ animation: blushPulse 2s ease-in-out infinite 1s; }
+    .dm-tail  { transform-box: view-box; transform-origin: 132px 158px; animation: tailWag 0.52s ease-in-out infinite; }
+  `;
+
   return (
-    <div style={{ position: "relative", width: 170, height: 190 }}>
-      {/* ── Normal: eyes open ── */}
-      <svg
-        viewBox="0 0 170 190"
-        style={{ ...common, opacity: eyesCovered ? 0 : 1 }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Body */}
-        <ellipse cx="85" cy="168" rx="52" ry="38" fill="#E8A030" />
-        <ellipse cx="85" cy="172" rx="34" ry="38" fill="#F5EDE0" />
-        {/* Left ear */}
-        <ellipse cx="36" cy="68" rx="20" ry="30" fill="#CF8220" transform="rotate(-18 36 68)" />
-        <ellipse cx="36" cy="68" rx="12" ry="20" fill="#F0C0A0" transform="rotate(-18 36 68)" />
-        {/* Right ear */}
-        <ellipse cx="134" cy="68" rx="20" ry="30" fill="#CF8220" transform="rotate(18 134 68)" />
-        <ellipse cx="134" cy="68" rx="12" ry="20" fill="#F0C0A0" transform="rotate(18 134 68)" />
-        {/* Head */}
-        <ellipse cx="85" cy="84" rx="56" ry="54" fill="#E8A030" />
-        {/* White forehead patch */}
-        <ellipse cx="85" cy="66" rx="24" ry="22" fill="#F5EDE0" />
-        {/* Eye whites */}
-        <ellipse cx="66" cy="82" rx="14" ry="15" fill="white" />
-        <ellipse cx="104" cy="82" rx="14" ry="15" fill="white" />
-        {/* Pupils */}
-        <circle cx="68" cy="84" r="10" fill="#120A02" />
-        <circle cx="102" cy="84" r="10" fill="#120A02" />
-        {/* Eye shines */}
-        <circle cx="72" cy="80" r="3.5" fill="white" />
-        <circle cx="106" cy="80" r="3.5" fill="white" />
-        <circle cx="65" cy="88" r="1.5" fill="white" opacity="0.6" />
-        <circle cx="99" cy="88" r="1.5" fill="white" opacity="0.6" />
-        {/* Blush */}
-        <ellipse cx="50" cy="96" rx="11" ry="7" fill="#F09090" opacity="0.38" />
-        <ellipse cx="120" cy="96" rx="11" ry="7" fill="#F09090" opacity="0.38" />
-        {/* Nose */}
-        <ellipse cx="85" cy="104" rx="9" ry="6.5" fill="#1E0E04" />
-        <circle cx="82" cy="102" r="2" fill="white" opacity="0.4" />
-        {/* Mouth */}
-        <path d="M74 112 Q85 122 96 112" stroke="#1E0E04" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Tongue */}
-        <ellipse cx="85" cy="120" rx="8" ry="6" fill="#E05070" />
-        <line x1="85" y1="114" x2="85" y2="126" stroke="#C03055" strokeWidth="1.2" />
-        {/* Left arm normal */}
-        <ellipse cx="36" cy="162" rx="18" ry="26" fill="#E8A030" />
-        <ellipse cx="36" cy="182" rx="16" ry="10" fill="#CF8220" />
-        <ellipse cx="28" cy="180" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="36" cy="177" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="44" cy="180" rx="5" ry="3.5" fill="#B87018" />
-        {/* Right arm normal */}
-        <ellipse cx="134" cy="162" rx="18" ry="26" fill="#E8A030" />
-        <ellipse cx="134" cy="182" rx="16" ry="10" fill="#CF8220" />
-        <ellipse cx="126" cy="180" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="134" cy="177" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="142" cy="180" rx="5" ry="3.5" fill="#B87018" />
+    <div style={{ position: "relative", width: 190, height: 200 }}>
+      {/* ── Normal: eyes open + all animations ── */}
+      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered ? 0 : 1 }} xmlns="http://www.w3.org/2000/svg">
+        <style>{styles}</style>
+
+        {/* Tail (behind body) */}
+        <g className="dm-tail">
+          <path d="M137 160 Q158 148 165 132 Q170 118 160 112" stroke="#CF8220" strokeWidth="11" fill="none" strokeLinecap="round"/>
+          <path d="M137 160 Q158 148 165 132 Q170 118 160 112" stroke="#E8A030" strokeWidth="7"  fill="none" strokeLinecap="round"/>
+        </g>
+
+        {/* Body group (sways) */}
+        <g className="dm-body">
+          {/* Body */}
+          <ellipse cx="95" cy="175" rx="52" ry="36" fill="#E8A030"/>
+          {/* Body shading */}
+          <ellipse cx="95" cy="178" rx="34" ry="32" fill="#F5EDE0"/>
+          <ellipse cx="85" cy="183" rx="22" ry="18" fill="#EDE5D8" opacity="0.5"/>
+          {/* Neck shading */}
+          <ellipse cx="95" cy="143" rx="22" ry="12" fill="#D4901A" opacity="0.35"/>
+
+          {/* Left ear */}
+          <g className="dm-earL">
+            <ellipse cx="46" cy="72" rx="20" ry="31" fill="#CF8220"/>
+            <ellipse cx="46" cy="72" rx="12" ry="21" fill="#F0C0A0"/>
+            {/* Inner ear crease */}
+            <ellipse cx="46" cy="76" rx="6" ry="12" fill="#E8B090" opacity="0.5"/>
+          </g>
+
+          {/* Right ear */}
+          <g className="dm-earR">
+            <ellipse cx="144" cy="72" rx="20" ry="31" fill="#CF8220"/>
+            <ellipse cx="144" cy="72" rx="12" ry="21" fill="#F0C0A0"/>
+            <ellipse cx="144" cy="76" rx="6" ry="12" fill="#E8B090" opacity="0.5"/>
+          </g>
+
+          {/* Head */}
+          <ellipse cx="95" cy="88" rx="56" ry="54" fill="#E8A030"/>
+          {/* Head fur shading sides */}
+          <ellipse cx="50"  cy="90" rx="18" ry="30" fill="#CF8220" opacity="0.28"/>
+          <ellipse cx="140" cy="90" rx="18" ry="30" fill="#CF8220" opacity="0.28"/>
+          {/* Forehead diamond patch */}
+          <path d="M95 44 L107 60 L95 76 L83 60 Z" fill="#F5EDE0" opacity="0.95"/>
+          {/* Forehead soft blend */}
+          <ellipse cx="95" cy="62" rx="16" ry="14" fill="#F5EDE0" opacity="0.6"/>
+
+          {/* Eyebrows */}
+          <path d="M62 70 Q70 65 78 70" stroke="#8B5E20" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+          <path d="M112 70 Q120 65 128 70" stroke="#8B5E20" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+
+          {/* Eye whites */}
+          <ellipse className="dm-eyeL" cx="72"  cy="85" rx="14" ry="15" fill="white"/>
+          <ellipse className="dm-eyeR" cx="118" cy="85" rx="14" ry="15" fill="white"/>
+          {/* Pupils */}
+          <circle cx="74"  cy="87" r="10" fill="#120A02"/>
+          <circle cx="116" cy="87" r="10" fill="#120A02"/>
+          {/* Eye shines large */}
+          <circle cx="78"  cy="83" r="3.5" fill="white"/>
+          <circle cx="120" cy="83" r="3.5" fill="white"/>
+          {/* Eye shines small */}
+          <circle cx="71"  cy="91" r="1.5" fill="white" opacity="0.6"/>
+          <circle cx="113" cy="91" r="1.5" fill="white" opacity="0.6"/>
+
+          {/* Whisker dots left */}
+          <circle cx="52" cy="100" r="2" fill="#8B5E20" opacity="0.55"/>
+          <circle cx="52" cy="107" r="2" fill="#8B5E20" opacity="0.55"/>
+          <circle cx="52" cy="114" r="2" fill="#8B5E20" opacity="0.55"/>
+          {/* Whisker dots right */}
+          <circle cx="138" cy="100" r="2" fill="#8B5E20" opacity="0.55"/>
+          <circle cx="138" cy="107" r="2" fill="#8B5E20" opacity="0.55"/>
+          <circle cx="138" cy="114" r="2" fill="#8B5E20" opacity="0.55"/>
+
+          {/* Blush */}
+          <ellipse className="dm-blushL" cx="56"  cy="99" rx="11" ry="7" fill="#F09090" opacity="0.38"/>
+          <ellipse className="dm-blushR" cx="134" cy="99" rx="11" ry="7" fill="#F09090" opacity="0.38"/>
+
+          {/* Nose */}
+          <ellipse cx="95" cy="107" rx="9" ry="6.5" fill="#1E0E04"/>
+          {/* Nose ridge highlight */}
+          <line x1="95" y1="102" x2="95" y2="110" stroke="#3A1A08" strokeWidth="1.2" opacity="0.4"/>
+          <circle cx="92" cy="104" r="2.2" fill="white" opacity="0.4"/>
+
+          {/* Mouth */}
+          <path d="M82 115 Q95 126 108 115" stroke="#1E0E04" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+
+          {/* Tongue (wagging) */}
+          <g className="dm-tongue">
+            <ellipse cx="95" cy="124" rx="9" ry="7" fill="#E05070"/>
+            <line x1="95" y1="117" x2="95" y2="131" stroke="#C03055" strokeWidth="1.4"/>
+          </g>
+
+          {/* Left arm */}
+          <ellipse cx="43"  cy="165" rx="18" ry="26" fill="#E8A030"/>
+          <ellipse cx="43"  cy="185" rx="16" ry="10" fill="#CF8220"/>
+          <ellipse cx="35"  cy="183" rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="43"  cy="180" rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="51"  cy="183" rx="5" ry="3.5" fill="#B87018"/>
+          {/* Right arm */}
+          <ellipse cx="147" cy="165" rx="18" ry="26" fill="#E8A030"/>
+          <ellipse cx="147" cy="185" rx="16" ry="10" fill="#CF8220"/>
+          <ellipse cx="139" cy="183" rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="147" cy="180" rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="155" cy="183" rx="5" ry="3.5" fill="#B87018"/>
+        </g>
       </svg>
 
       {/* ── Eyes covered: paws up ── */}
-      <svg
-        viewBox="0 0 170 190"
-        style={{ ...common, opacity: eyesCovered ? 1 : 0 }}
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Body */}
-        <ellipse cx="85" cy="168" rx="52" ry="38" fill="#E8A030" />
-        <ellipse cx="85" cy="172" rx="34" ry="38" fill="#F5EDE0" />
-        {/* Left ear */}
-        <ellipse cx="36" cy="68" rx="20" ry="30" fill="#CF8220" transform="rotate(-18 36 68)" />
-        <ellipse cx="36" cy="68" rx="12" ry="20" fill="#F0C0A0" transform="rotate(-18 36 68)" />
-        {/* Right ear */}
-        <ellipse cx="134" cy="68" rx="20" ry="30" fill="#CF8220" transform="rotate(18 134 68)" />
-        <ellipse cx="134" cy="68" rx="12" ry="20" fill="#F0C0A0" transform="rotate(18 134 68)" />
-        {/* Head */}
-        <ellipse cx="85" cy="84" rx="56" ry="54" fill="#E8A030" />
-        {/* White forehead patch */}
-        <ellipse cx="85" cy="66" rx="24" ry="22" fill="#F5EDE0" />
-        {/* Blush (still visible) */}
-        <ellipse cx="50" cy="96" rx="11" ry="7" fill="#F09090" opacity="0.38" />
-        <ellipse cx="120" cy="96" rx="11" ry="7" fill="#F09090" opacity="0.38" />
-        {/* Nose */}
-        <ellipse cx="85" cy="104" rx="9" ry="6.5" fill="#1E0E04" />
-        <circle cx="82" cy="102" r="2" fill="white" opacity="0.4" />
-        {/* Mouth */}
-        <path d="M74 112 Q85 122 96 112" stroke="#1E0E04" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-        {/* Tongue */}
-        <ellipse cx="85" cy="120" rx="8" ry="6" fill="#E05070" />
-        <line x1="85" y1="114" x2="85" y2="126" stroke="#C03055" strokeWidth="1.2" />
-        {/* Left arm — raised to cover left eye */}
-        <ellipse cx="52" cy="102" rx="20" ry="16" fill="#E8A030" transform="rotate(-40 52 102)" />
-        <ellipse cx="40" cy="88" rx="18" ry="12" fill="#CF8220" />
-        <ellipse cx="31" cy="84" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="40" cy="81" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="49" cy="84" rx="5" ry="3.5" fill="#B87018" />
-        {/* Right arm — raised to cover right eye */}
-        <ellipse cx="118" cy="102" rx="20" ry="16" fill="#E8A030" transform="rotate(40 118 102)" />
-        <ellipse cx="130" cy="88" rx="18" ry="12" fill="#CF8220" />
-        <ellipse cx="121" cy="84" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="130" cy="81" rx="5" ry="3.5" fill="#B87018" />
-        <ellipse cx="139" cy="84" rx="5" ry="3.5" fill="#B87018" />
+      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered ? 1 : 0 }} xmlns="http://www.w3.org/2000/svg">
+        <style>{`
+          @keyframes dogSway2 {
+            0%,100% { transform: rotate(-1deg) translateX(-1px); }
+            50%      { transform: rotate( 1deg) translateX( 1px); }
+          }
+          .dm2-body { transform-origin: 95px 160px; animation: dogSway2 3.2s ease-in-out infinite; }
+          .dm2-blushL { animation: blushPulse 2s ease-in-out infinite; }
+          .dm2-blushR { animation: blushPulse 2s ease-in-out infinite 1s; }
+          @keyframes blushPulse { 0%,100%{opacity:0.38}50%{opacity:0.6} }
+        `}</style>
+
+        {/* Tail */}
+        <g className="dm-tail" style={{transformBox:"view-box",transformOrigin:"132px 158px", animation:"tailWag 0.52s ease-in-out infinite"}}>
+          <path d="M137 160 Q158 148 165 132 Q170 118 160 112" stroke="#CF8220" strokeWidth="11" fill="none" strokeLinecap="round"/>
+          <path d="M137 160 Q158 148 165 132 Q170 118 160 112" stroke="#E8A030" strokeWidth="7"  fill="none" strokeLinecap="round"/>
+        </g>
+
+        <g className="dm2-body">
+          {/* Body */}
+          <ellipse cx="95" cy="175" rx="52" ry="36" fill="#E8A030"/>
+          <ellipse cx="95" cy="178" rx="34" ry="32" fill="#F5EDE0"/>
+          <ellipse cx="85" cy="183" rx="22" ry="18" fill="#EDE5D8" opacity="0.5"/>
+          <ellipse cx="95" cy="143" rx="22" ry="12" fill="#D4901A" opacity="0.35"/>
+
+          {/* Left ear */}
+          <ellipse cx="46" cy="72" rx="20" ry="31" fill="#CF8220" transform="rotate(-18 46 72)"/>
+          <ellipse cx="46" cy="72" rx="12" ry="21" fill="#F0C0A0" transform="rotate(-18 46 72)"/>
+          {/* Right ear */}
+          <ellipse cx="144" cy="72" rx="20" ry="31" fill="#CF8220" transform="rotate(18 144 72)"/>
+          <ellipse cx="144" cy="72" rx="12" ry="21" fill="#F0C0A0" transform="rotate(18 144 72)"/>
+
+          {/* Head */}
+          <ellipse cx="95" cy="88" rx="56" ry="54" fill="#E8A030"/>
+          <ellipse cx="50"  cy="90" rx="18" ry="30" fill="#CF8220" opacity="0.28"/>
+          <ellipse cx="140" cy="90" rx="18" ry="30" fill="#CF8220" opacity="0.28"/>
+          <path d="M95 44 L107 60 L95 76 L83 60 Z" fill="#F5EDE0" opacity="0.95"/>
+          <ellipse cx="95" cy="62" rx="16" ry="14" fill="#F5EDE0" opacity="0.6"/>
+
+          {/* Worried eyebrows */}
+          <path d="M64 68 Q72 61 80 66" stroke="#8B5E20" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+          <path d="M110 66 Q118 61 126 68" stroke="#8B5E20" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+
+          {/* Blush stronger (embarrassed) */}
+          <ellipse className="dm2-blushL" cx="56"  cy="99" rx="13" ry="9" fill="#F06060" opacity="0.38"/>
+          <ellipse className="dm2-blushR" cx="134" cy="99" rx="13" ry="9" fill="#F06060" opacity="0.38"/>
+
+          {/* Nose */}
+          <ellipse cx="95" cy="107" rx="9" ry="6.5" fill="#1E0E04"/>
+          <circle cx="92" cy="104" r="2.2" fill="white" opacity="0.4"/>
+
+          {/* Squiggly embarrassed mouth */}
+          <path d="M82 118 Q88 113 95 118 Q102 123 108 118" stroke="#1E0E04" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+
+          {/* Left arm raised to cover left eye */}
+          <ellipse cx="58" cy="105" rx="20" ry="16" fill="#E8A030" transform="rotate(-42 58 105)"/>
+          <ellipse cx="45" cy="90"  rx="19" ry="13" fill="#CF8220"/>
+          <ellipse cx="36" cy="86"  rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="45" cy="83"  rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="54" cy="86"  rx="5" ry="3.5" fill="#B87018"/>
+
+          {/* Right arm raised to cover right eye */}
+          <ellipse cx="132" cy="105" rx="20" ry="16" fill="#E8A030" transform="rotate(42 132 105)"/>
+          <ellipse cx="145" cy="90"  rx="19" ry="13" fill="#CF8220"/>
+          <ellipse cx="136" cy="86"  rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="145" cy="83"  rx="5" ry="3.5" fill="#B87018"/>
+          <ellipse cx="154" cy="86"  rx="5" ry="3.5" fill="#B87018"/>
+        </g>
       </svg>
     </div>
   );
