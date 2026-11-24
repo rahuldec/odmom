@@ -284,69 +284,57 @@ async function generateMomPdf(mom: MOM) {
   // ── Meeting Information ───────────────────────────────────────────────
   section("Meeting Information");
 
-  // Hero row: Client / Institute as a prominent banner card with orange accent.
-  const heroH = 46;
-  ensureSpace(heroH + 14);
-  doc.setFillColor(...MAROON);
-  doc.roundedRect(margin, y - 4, contentW, heroH, 5, 5, "F");
-  doc.setFillColor(...ORANGE);
-  doc.rect(margin, y - 4, 5, heroH, "F");
+  // Compact single-row info bar: all 5 fields side by side.
+  const infoH = 40;
+  ensureSpace(infoH + 12);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...SLATE_LIGHT);
-  doc.text("CLIENT / INSTITUTE", margin + 20, y + 12);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(...WHITE);
-  doc.text(mom.client_name, margin + 20, y + 30);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...SLATE_LIGHT);
-  doc.text("EMPLOYEE", pageWidth - margin - 20, y + 12, { align: "right" });
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  doc.setTextColor(...WHITE);
-  doc.text(mom.employee_name, pageWidth - margin - 20, y + 30, { align: "right" });
-
-  y += heroH + 16;
-
-  // Stat cards: Meeting Date, Meeting Type, Attendees — 3 equal columns.
-  const cardH = 52;
-  ensureSpace(cardH + 10);
-  const cardGap = 12;
-  const cardW = (contentW - cardGap * 2) / 3;
-
-  const statCards: [string, string][] = [
+  // Proportional column widths (must sum to 1)
+  const colWidths = [0.33, 0.28, 0.17, 0.13, 0.09].map((r) => contentW * r);
+  const colFields: [string, string][] = [
+    ["CLIENT / INSTITUTE", mom.client_name],
+    ["EMPLOYEE", mom.employee_name],
     ["MEETING DATE", formatDate(mom.meeting_date)],
     ["MEETING TYPE", mom.meeting_type === "online" ? "Online" : "On site"],
     ["ATTENDEES", String(mom.attendees.length || 0)],
   ];
 
-  statCards.forEach(([label, value], i) => {
-    const cx = margin + i * (cardW + cardGap);
+  doc.setFillColor(...ROW_TINT);
+  doc.setDrawColor(...LINE);
+  doc.setLineWidth(0.75);
+  doc.roundedRect(margin, y - 4, contentW, infoH, 5, 5, "FD");
 
-    doc.setFillColor(...ROW_TINT);
-    doc.setDrawColor(...LINE);
-    doc.setLineWidth(0.75);
-    doc.roundedRect(cx, y - 4, cardW, cardH, 5, 5, "FD");
+  doc.setFillColor(...ORANGE);
+  doc.roundedRect(margin, y - 4, contentW, 3, 1.5, 1.5, "F");
 
-    doc.setFillColor(...ORANGE);
-    doc.roundedRect(cx, y - 4, cardW, 3, 1.5, 1.5, "F");
+  doc.setFillColor(...MAROON);
+  doc.rect(margin, y - 4, 5, infoH, "F");
+
+  let colX = margin + 5;
+  colFields.forEach(([label, value], i) => {
+    const cw = colWidths[i];
+    const pad = 10;
+
+    if (i > 0) {
+      doc.setDrawColor(...LINE);
+      doc.setLineWidth(0.5);
+      doc.line(colX, y, colX, y - 4 + infoH - 5);
+    }
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.2);
+    doc.setFontSize(6.5);
     doc.setTextColor(...SLATE);
-    doc.text(label, cx + 14, y + 16);
+    doc.text(label, colX + pad, y + 10);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
+    doc.setFontSize(10);
     doc.setTextColor(...MAROON);
-    doc.text(value, cx + 14, y + 35);
+    const valueTxt = doc.splitTextToSize(value, cw - pad - 6)[0];
+    doc.text(valueTxt, colX + pad, y + 27);
+
+    colX += cw;
   });
 
-  y += cardH + 20;
+  y += infoH + 16;
 
   // ── Attendees ──────────────────────────────────────────────────────────
   if (mom.attendees.length) {
