@@ -698,18 +698,17 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground whitespace-nowrap">Form signed?</span>
                   <Select
-                    value={w.form_signed ?? "none"}
+                    value={w.form_signed ?? ""}
                     onValueChange={(v) => {
                       const copy = form.work_completed.slice();
-                      copy[i] = { ...w, form_signed: (v === "none" ? null : v) as FormSigned };
+                      copy[i] = { ...w, form_signed: (v || null) as FormSigned };
                       update("work_completed", copy);
                     }}
                   >
                     <SelectTrigger className="w-64" aria-label="Form signed">
-                      <SelectValue />
+                      <SelectValue placeholder="Select form signed" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No form signed</SelectItem>
                       <SelectItem value="query_resolution">Query Resolution Form</SelectItem>
                       <SelectItem value="handover">Handover Document Form</SelectItem>
                     </SelectContent>
