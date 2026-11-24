@@ -631,6 +631,8 @@ function LoginPage() {
                     value={digit}
                     onChange={(e) => handleOtpInput(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
                     className="h-12 w-full text-center font-mono text-xl font-bold"
                     disabled={loading}
                     autoComplete={i === 0 ? "one-time-code" : "off"}
