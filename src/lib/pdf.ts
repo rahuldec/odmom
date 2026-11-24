@@ -159,7 +159,7 @@ async function generateMomPdf(mom: MOM) {
     doc.setFont("times", "bold");
     doc.setFontSize(8);
     doc.setTextColor(...CHARCOAL);
-    doc.text("OKIE DOKIE  |  YOUR CAMPUS AUTOMATION PARTNER", pageWidth - margin, 20, { align: "right" });
+    doc.text("OKIE DOKIE  |  CAMPUS AUTOMATION PARTNER", pageWidth - margin, 20, { align: "right" });
 
     doc.setFont("times", "normal");
     doc.setFontSize(7);
