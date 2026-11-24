@@ -146,29 +146,25 @@ async function generateMomPdf(mom: MOM) {
   const rHeaderH = 54;
 
   const drawHeader = () => {
-    // Maroon rule at very top
-    doc.setDrawColor(...MAROON);
-    doc.setLineWidth(2);
-    doc.line(margin, 16, pageWidth - margin, 16);
-
-    // Logo
+    // Logo — vertically centered in header, no overlapping rule
     if (logo) {
-      const lSize = 32;
+      const lSize = 36;
+      const lY = (rHeaderH - lSize) / 2;
       doc.setFillColor(...WHITE);
-      doc.circle(margin + lSize / 2, 32, lSize * 0.52, "F");
-      doc.addImage(logo.dataUrl, "PNG", margin, 16, lSize, lSize);
+      doc.circle(margin + lSize / 2, lY + lSize / 2, lSize * 0.52, "F");
+      doc.addImage(logo.dataUrl, "PNG", margin, lY, lSize, lSize);
     }
 
     // Company tag — right-aligned, two lines
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
+    doc.setFont("times", "bold");
+    doc.setFontSize(8);
     doc.setTextColor(...CHARCOAL);
-    doc.text("OKIE DOKIE  |  YOUR CAMPUS AUTOMATION PARTNER", pageWidth - margin, 26, { align: "right" });
+    doc.text("OKIE DOKIE  |  YOUR CAMPUS AUTOMATION PARTNER", pageWidth - margin, 20, { align: "right" });
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
+    doc.setFont("times", "normal");
+    doc.setFontSize(7);
     doc.setTextColor(...MID);
-    doc.text("www.okiedokiepay.com  ·  services@okiedokiepay.com", pageWidth - margin, 38, { align: "right" });
+    doc.text("www.okiedokiepay.com  ·  services@okiedokiepay.com", pageWidth - margin, 32, { align: "right" });
 
     // Bottom rule
     doc.setDrawColor(...RULE);
@@ -181,18 +177,18 @@ async function generateMomPdf(mom: MOM) {
   // ── TITLE BLOCK (first page) ──────────────────────────────────────────
   let y = rHeaderH + 24;
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
+  doc.setFont("times", "bold");
+  doc.setFontSize(16);
   doc.setTextColor(...DARK);
   const titleText = "MINUTES OF MEETING";
   const tw = doc.getTextWidth(titleText);
   doc.text(titleText, pageWidth / 2, y, { align: "center" });
-  y += 6;
+  y += 5;
 
   doc.setDrawColor(...MAROON);
   doc.setLineWidth(1.5);
   doc.line(pageWidth / 2 - tw / 2, y, pageWidth / 2 + tw / 2, y);
-  y += 20;
+  y += 18;
 
   // ── MEETING INFO GRID ─────────────────────────────────────────────────
   const infoLabelW = 72;
@@ -204,13 +200,13 @@ async function generateMomPdf(mom: MOM) {
   ];
 
   infoRows.forEach(([l1, v1, l2, v2]) => {
-    doc.setFont("helvetica", "bold");
+    doc.setFont("times", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(...CHARCOAL);
     doc.text(l1, margin, y);
     doc.text(l2, col2X, y);
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont("times", "normal");
     doc.setFontSize(8.5);
     doc.setTextColor(...DARK);
     doc.text(v1, margin + infoLabelW, y);
@@ -229,8 +225,7 @@ async function generateMomPdf(mom: MOM) {
   const ensureSpace = (needed: number) => {
     if (y + needed > pageHeight - 60) {
       doc.addPage();
-      drawHeader();
-      y = rHeaderH + 24;
+      y = 40;
     }
   };
 
@@ -239,7 +234,7 @@ async function generateMomPdf(mom: MOM) {
     sectionNo++;
     ensureSpace(36);
 
-    doc.setFont("helvetica", "bold");
+    doc.setFont("times", "bold");
     doc.setFontSize(10.5);
     doc.setTextColor(...DARK);
     doc.text(`${sectionNo}.  ${title.toUpperCase()}`, margin, y);
@@ -413,14 +408,14 @@ async function generateMomPdf(mom: MOM) {
           const iy = rowY + (boxH - h) / 2;
           doc.addImage(loaded.dataUrl, imageFormat(loaded.dataUrl), ix, iy, w, h);
         } else {
-          doc.setFont("helvetica", "italic");
+          doc.setFont("times", "italic");
           doc.setFontSize(8.5);
           doc.setTextColor(...MID);
           doc.text("Image unavailable", cx + boxW / 2, rowY + boxH / 2, { align: "center" });
         }
 
         if (photo.caption?.trim()) {
-          doc.setFont("helvetica", "normal");
+          doc.setFont("times", "normal");
           doc.setFontSize(8);
           doc.setTextColor(...MID);
           const capLines = doc.splitTextToSize(photo.caption.trim(), boxW);
@@ -469,12 +464,12 @@ async function generateMomPdf(mom: MOM) {
   ensureSpace(100);
   y += 10;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont("times", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(...CHARCOAL);
   doc.text("Regards,", margin, y);
   y += 13;
-  doc.setFont("helvetica", "normal");
+  doc.setFont("times", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
   doc.text("Team Okie Dokie", margin, y);
@@ -489,14 +484,14 @@ async function generateMomPdf(mom: MOM) {
   doc.line(margin + sigW + 40, y, margin + sigW + 40 + sigW, y);
   y += 14;
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont("times", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(...DARK);
   doc.text(mom.employee_name, margin, y);
   doc.text(mom.client_name, margin + sigW + 40, y);
   y += 11;
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont("times", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...MID);
   doc.text("Okie Dokie Team", margin, y);
@@ -511,7 +506,7 @@ async function generateMomPdf(mom: MOM) {
     doc.setLineWidth(0.5);
     doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont("times", "normal");
     doc.setFontSize(7.5);
     doc.setTextColor(...MID);
     doc.text("Okie Dokie  ·  www.okiedokiepay.com", pageWidth / 2, footerY, { align: "center" });
