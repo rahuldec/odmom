@@ -2,7 +2,7 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, Building2, CalendarDays, Clock3, FileText } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, Clock3, Download, FileText } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -72,11 +72,23 @@ function DashboardPage() {
         title="Dashboard"
         description="What's been recorded, who's been out there, and what's still waiting on someone."
         actions={
-          <Link to="/meetings">
-            <Button variant="outline" className="gap-1.5">
-              All meetings <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <a href="/ERP_Module_Handover_Template.pdf" download="ERP Module Handover Document.pdf">
+              <Button variant="outline" className="gap-1.5">
+                <Download className="h-4 w-4" /> Handover Doc
+              </Button>
+            </a>
+            <a href="/ERP_Query_Resolution_Form.pdf" download="ERP Query Resolution Form.pdf">
+              <Button variant="outline" className="gap-1.5">
+                <Download className="h-4 w-4" /> Query Resolution
+              </Button>
+            </a>
+            <Link to="/meetings">
+              <Button variant="outline" className="gap-1.5">
+                All meetings <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         }
       />
 
