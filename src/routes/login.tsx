@@ -144,10 +144,6 @@ function LoginPage() {
               <image href={logoUrl} x="23" y="23" width="54" height="54" />
             </Seal>
           </div>
-          <div className="text-center">
-            <h1 className="font-display text-2xl font-bold tracking-tight">MOM Portal</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Okie Dokie · Campus Automation</p>
-          </div>
         </div>
 
         {/* Card */}
