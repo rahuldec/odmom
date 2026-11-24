@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { ArrowRight, Eye, EyeOff, KeyRound, RotateCcw, ShieldCheck, Smartphone } from "lucide-react";
 import { Seal } from "@/components/seal";
+import logoUrl from "../logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendLoginOtp, verifyLoginOtp, loginWithPassword } from "@/lib/erp-auth.functions";
@@ -139,7 +140,9 @@ function LoginPage() {
               className="h-24 w-24 text-primary"
               topText="MOM PORTAL"
               bottomText="OKIE DOKIE"
-            />
+            >
+              <image href={logoUrl} x="23" y="23" width="54" height="54" />
+            </Seal>
           </div>
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">MOM Portal</h1>
