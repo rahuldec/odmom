@@ -223,7 +223,7 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
         pp.forEach((p) =>
           lines.push(
             `- [${p.module}] ${p.requirement.trim()} (pending with: ${
-              p.pending_with === "okie_dokie" ? "Okie Dokie team" : "client"
+              p.pending_with === "okie_dokie" ? "tech team" : p.pending_with === "cs" ? "CS team" : "client"
             })`,
           ),
         );
@@ -760,7 +760,11 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                     value={p.pending_with}
                     onValueChange={(v) => {
                       const copy = form.pending_points.slice();
-                      copy[i] = { ...p, pending_with: v as PendingWith };
+                      copy[i] = {
+                        ...p,
+                        pending_with: v as PendingWith,
+                        due_date: v === "okie_dokie" ? undefined : p.due_date,
+                      };
                       update("pending_points", copy);
                     }}
                   >
@@ -776,6 +780,21 @@ export function MomForm({ initial, submitting, onSubmit, submitLabel, draftKey }
                     </SelectContent>
                   </Select>
                 </div>
+                {p.pending_with !== "okie_dokie" && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">Due date</label>
+                    <Input
+                      type="date"
+                      value={p.due_date ?? ""}
+                      className="w-44"
+                      onChange={(e) => {
+                        const copy = form.pending_points.slice();
+                        copy[i] = { ...p, due_date: e.target.value || undefined };
+                        update("pending_points", copy);
+                      }}
+                    />
+                  </div>
+                )}
                 <PendingAttachments
                   value={p.attachments ?? []}
                   onChange={(nextFiles) => {

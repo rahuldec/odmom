@@ -192,7 +192,7 @@ function DetailPage() {
     t.name.toLowerCase().includes(taskQuery.trim().toLowerCase()),
   );
 
-  const ours = (mom.pending_points ?? []).filter((p) => p.pending_with === "okie_dokie");
+  const ours = (mom.pending_points ?? []).filter((p) => p.pending_with === "okie_dokie" || p.pending_with === "cs");
   const theirs = (mom.pending_points ?? []).filter((p) => p.pending_with === "client");
   const clientSide = mom.attendees.filter((a) => a.team === "client");
   const odSide = mom.attendees.filter((a) => a.team === "okie_dokie");

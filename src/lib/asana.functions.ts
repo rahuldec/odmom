@@ -357,13 +357,20 @@ function formatAsanaTaskDescription(mom: MOM): string {
   }
 
   if ((mom.pending_points ?? []).length > 0) {
-    const ours = mom.pending_points.filter((p) => p.pending_with === "okie_dokie");
+    const tech = mom.pending_points.filter((p) => p.pending_with === "okie_dokie");
+    const cs = mom.pending_points.filter((p) => p.pending_with === "cs");
     const theirs = mom.pending_points.filter((p) => p.pending_with === "client");
 
-    if (ours.length > 0) {
-      lines.push("\n**Pending (Okie Dokie):**");
-      ours.forEach((p) => {
+    if (tech.length > 0) {
+      lines.push("\n**Pending (Tech Team):**");
+      tech.forEach((p) => {
         lines.push(`  • [${p.module}] ${p.requirement}`);
+      });
+    }
+    if (cs.length > 0) {
+      lines.push("\n**Pending (CS Team):**");
+      cs.forEach((p) => {
+        lines.push(`  • [${p.module}] ${p.requirement}${p.due_date ? ` — Due: ${p.due_date}` : ""}`);
       });
     }
 

@@ -7,12 +7,13 @@ export type Attendee = {
 };
 export type DiscussionPoint = { module: string; details: string };
 export type WorkCompletedItem = { module: string; task: string };
-export type PendingWith = "okie_dokie" | "client";
+export type PendingWith = "okie_dokie" | "cs" | "client";
 export type PendingAttachment = { path: string; url: string; name?: string };
 export type PendingPoint = {
   module: string;
   requirement: string;
   pending_with: PendingWith;
+  due_date?: string;
   attachments?: PendingAttachment[];
 };
 
@@ -22,7 +23,8 @@ export const ATTENDEE_TEAMS: { value: AttendeeTeam; label: string }[] = [
 ];
 
 export const PENDING_WITH: { value: PendingWith; label: string }[] = [
-  { value: "okie_dokie", label: "Okie Dokie Team" },
+  { value: "okie_dokie", label: "Tech Team" },
+  { value: "cs", label: "CS Team" },
   { value: "client", label: "Client" },
 ];
 

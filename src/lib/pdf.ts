@@ -279,7 +279,8 @@ async function generateMomPdf(mom: MOM) {
     margin: { left: margin, right: margin },
   };
 
-  const teamBadge = (team: "okie_dokie" | "client") => (team === "okie_dokie" ? "Okie Dokie Team" : "Client");
+  const teamBadge = (team: "okie_dokie" | "cs" | "client") =>
+    team === "okie_dokie" ? "Okie Dokie Team" : team === "cs" ? "CS Team" : "Client";
 
   // ── Meeting Information ───────────────────────────────────────────────
   section("Meeting Information");
@@ -350,6 +351,54 @@ async function generateMomPdf(mom: MOM) {
     y = doc.lastAutoTable.finalY + 24;
   }
 
+  // ── Pending Points ──────────────────────────────────────────────────────
+  if (mom.pending_points.length) {
+    section("Pending Points");
+    autoTable(doc, {
+      startY: y,
+      head: [["Module", "Requirement", "Pending With", "Due Date"]],
+      body: mom.pending_points.map((p) => {
+        const badge =
+          p.pending_with === "okie_dokie"
+            ? "Tech Team"
+            : p.pending_with === "cs"
+              ? "CS Team"
+              : "Client";
+        const dueDate =
+          p.pending_with === "okie_dokie"
+            ? "Date will be given after discussing with tech"
+            : p.due_date
+              ? formatDate(p.due_date)
+              : "—";
+        return [p.module, p.requirement, badge, dueDate];
+      }),
+      columnStyles: {
+        0: { cellWidth: 90, fontStyle: "bold" },
+        2: { cellWidth: 80, halign: "center" },
+        3: { cellWidth: 110 },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 2) {
+          const val = String(data.cell.raw);
+          const isTech = val === "Tech Team";
+          const isCs = val === "CS Team";
+          data.cell.styles.fillColor = isTech ? GOLD_BG : isCs ? ORANGE_LIGHT : NEUTRAL_BG;
+          data.cell.styles.textColor = isTech ? GOLD_TX : isCs ? MAROON : NEUTRAL_TX;
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.fontSize = 8;
+        }
+        if (data.section === "body" && data.column.index === 3 && String(data.cell.raw).startsWith("Date will")) {
+          data.cell.styles.textColor = SLATE as [number, number, number];
+          data.cell.styles.fontStyle = "italic";
+          data.cell.styles.fontSize = 7.5;
+        }
+      },
+      ...tableTheme,
+    });
+    // @ts-expect-error autotable
+    y = doc.lastAutoTable.finalY + 24;
+  }
+
   // ── Work Completed ──────────────────────────────────────────────────────
   if (mom.work_completed.length) {
     section("Work Completed");
@@ -358,32 +407,6 @@ async function generateMomPdf(mom: MOM) {
       head: [["Module", "Task Completed"]],
       body: mom.work_completed.map((w) => [w.module, w.task]),
       columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" } },
-      ...tableTheme,
-    });
-    // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 24;
-  }
-
-  // ── Pending Points ──────────────────────────────────────────────────────
-  if (mom.pending_points.length) {
-    section("Pending Points");
-    autoTable(doc, {
-      startY: y,
-      head: [["Module", "Requirement", "Pending With"]],
-      body: mom.pending_points.map((p) => [p.module, p.requirement, teamBadge(p.pending_with)]),
-      columnStyles: {
-        0: { cellWidth: 100, fontStyle: "bold" },
-        2: { cellWidth: 110, halign: "center" },
-      },
-      didParseCell: (data) => {
-        if (data.section === "body" && data.column.index === 2) {
-          const isOdc = String(data.cell.raw) === "Okie Dokie Team";
-          data.cell.styles.fillColor = isOdc ? GOLD_BG : NEUTRAL_BG;
-          data.cell.styles.textColor = isOdc ? GOLD_TX : NEUTRAL_TX;
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fontSize = 8;
-        }
-      },
       ...tableTheme,
     });
     // @ts-expect-error autotable
