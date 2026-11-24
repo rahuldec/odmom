@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef } from "react";
 import { ArrowRight, Eye, EyeOff, KeyRound, RotateCcw, ShieldCheck, Smartphone } from "lucide-react";
+import { LoginPet } from "@/components/login-pet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sendLoginOtp, verifyLoginOtp, loginWithPassword } from "@/lib/erp-auth.functions";
@@ -34,6 +35,9 @@ function LoginPage() {
   // Password flow
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Pet state
+  const [petMode, setPetMode] = useState<"idle" | "number" | "password">("idle");
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -127,9 +131,11 @@ function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <img src="/od-seal.png" alt="Okie Dokie" className="h-28 w-28 object-contain" />
+        {/* Pet mascot */}
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <div className="relative flex items-end justify-center">
+            <LoginPet mode={petMode} progress={mobile.length} />
+          </div>
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold tracking-tight">MOM Portal</h1>
             <p className="mt-1 text-sm text-muted-foreground">Okie Dokie · Campus Automation</p>
@@ -189,6 +195,8 @@ function LoginPage() {
                     className="pl-11 font-mono tracking-widest"
                     value={mobile}
                     onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
+                    onFocus={() => setPetMode("number")}
+                    onBlur={() => setPetMode("idle")}
                     autoFocus
                     autoComplete="tel-national"
                     disabled={loading}
@@ -202,6 +210,8 @@ function LoginPage() {
                     className="pr-10"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                    onFocus={() => setPetMode("password")}
+                    onBlur={() => setPetMode("idle")}
                     autoComplete="current-password"
                     disabled={loading}
                   />
@@ -251,6 +261,8 @@ function LoginPage() {
                   className="pl-11 font-mono tracking-widest"
                   value={mobile}
                   onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
+                  onFocus={() => setPetMode("number")}
+                  onBlur={() => setPetMode("idle")}
                   autoFocus
                   autoComplete="tel-national"
                   disabled={loading}
