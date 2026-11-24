@@ -282,61 +282,6 @@ async function generateMomPdf(mom: MOM) {
   const teamBadge = (team: "okie_dokie" | "cs" | "client") =>
     team === "okie_dokie" ? "Okie Dokie Team" : team === "cs" ? "CS Team" : "Client";
 
-  // ── Meeting Information ───────────────────────────────────────────────
-  section("Meeting Information");
-
-  // Compact single-row info bar: all 5 fields side by side.
-  const infoH = 40;
-  ensureSpace(infoH + 12);
-
-  // Proportional column widths (must sum to 1)
-  const colWidths = [0.33, 0.28, 0.17, 0.13, 0.09].map((r) => contentW * r);
-  const colFields: [string, string][] = [
-    ["CLIENT / INSTITUTE", mom.client_name],
-    ["EMPLOYEE", mom.employee_name],
-    ["MEETING DATE", formatDate(mom.meeting_date)],
-    ["MEETING TYPE", mom.meeting_type === "online" ? "Online" : "On site"],
-    ["ATTENDEES", String(mom.attendees.length || 0)],
-  ];
-
-  doc.setFillColor(...ROW_TINT);
-  doc.setDrawColor(...LINE);
-  doc.setLineWidth(0.75);
-  doc.roundedRect(margin, y - 4, contentW, infoH, 5, 5, "FD");
-
-  doc.setFillColor(...ORANGE);
-  doc.roundedRect(margin, y - 4, contentW, 3, 1.5, 1.5, "F");
-
-  doc.setFillColor(...MAROON);
-  doc.rect(margin, y - 4, 5, infoH, "F");
-
-  let colX = margin + 5;
-  colFields.forEach(([label, value], i) => {
-    const cw = colWidths[i];
-    const pad = 10;
-
-    if (i > 0) {
-      doc.setDrawColor(...LINE);
-      doc.setLineWidth(0.5);
-      doc.line(colX, y, colX, y - 4 + infoH - 5);
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(6.5);
-    doc.setTextColor(...SLATE);
-    doc.text(label, colX + pad, y + 10);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(...MAROON);
-    const valueTxt = doc.splitTextToSize(value, cw - pad - 6)[0];
-    doc.text(valueTxt, colX + pad, y + 27);
-
-    colX += cw;
-  });
-
-  y += infoH + 16;
-
   // ── Discussion Points ───────────────────────────────────────────────────
   if (mom.discussion_points.length) {
     section("Discussion Points");
