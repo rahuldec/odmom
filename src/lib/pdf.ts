@@ -361,19 +361,7 @@ async function generateMomPdf(mom: MOM) {
     y = doc.lastAutoTable.finalY + 22;
   }
 
-  // ── HANDOVER DOCUMENTS ────────────────────────────────────────────────
-  if (handoverDocs.length) {
-    section("Handover Documents");
-    autoTable(doc, {
-      startY: y,
-      head: [["Module", "Document"]],
-      body: handoverDocs.map((d) => [d.module ?? "—", d.caption ?? "Document"]),
-      columnStyles: { 0: { cellWidth: 120, fontStyle: "bold" } },
-      ...tableTheme,
-    });
-    // @ts-expect-error autotable
-    y = doc.lastAutoTable.finalY + 22;
-  }
+
 
   // ── PHOTOS ────────────────────────────────────────────────────────────
   if (regularPhotos.length) {
