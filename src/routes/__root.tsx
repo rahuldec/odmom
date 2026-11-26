@@ -133,8 +133,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "MOM Portal | Okie Dokie" },
       { name: "twitter:description", content: DESCRIPTION },
-      { property: "og:image", content: ICON_URL },
-      { name: "twitter:image", content: ICON_URL },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

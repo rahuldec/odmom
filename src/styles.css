@@ -378,3 +378,59 @@
     content: "";
   }
 }
+
+/* Playful field-team sign-in scene. */
+.login-stage {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 1.5rem max(1rem, env(safe-area-inset-left, 0px)) 2rem;
+  background: linear-gradient(
+    180deg,
+    var(--background) 0%,
+    color-mix(in oklch, var(--success) 11%, var(--background)) 100%
+  );
+}
+
+.login-panel {
+  position: relative;
+  z-index: 10;
+  width: min(100%, 25rem);
+}
+
+.login-mascot {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  height: 10.5rem;
+  justify-content: center;
+  margin-bottom: -1.25rem;
+  pointer-events: none;
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  border: 1px solid color-mix(in oklch, var(--border) 78%, transparent);
+  border-radius: 1.5rem;
+  background: var(--card);
+  padding: 1.5rem;
+  box-shadow:
+    0 24px 72px -36px color-mix(in oklch, var(--foreground) 34%, transparent),
+    0 5px 18px -12px color-mix(in oklch, var(--foreground) 22%, transparent);
+}
+
+@media (max-width: 420px) {
+  .login-stage {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .login-card {
+    padding: 1.25rem;
+  }
+}
