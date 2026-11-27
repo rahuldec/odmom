@@ -406,9 +406,9 @@
   position: relative;
   z-index: 20;
   display: flex;
-  height: 10.5rem;
+  height: 12.5rem;
   justify-content: center;
-  margin-bottom: -1.25rem;
+  margin-bottom: -1.5rem;
   pointer-events: none;
 }
 
@@ -422,6 +422,48 @@
   box-shadow:
     0 24px 72px -36px color-mix(in oklch, var(--foreground) 34%, transparent),
     0 5px 18px -12px color-mix(in oklch, var(--foreground) 22%, transparent);
+}
+
+.login-wait-bubble {
+  position: absolute;
+  top: 0.25rem;
+  right: -0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--card);
+  padding: 0.5rem 0.625rem;
+  box-shadow: 0 5px 14px -8px color-mix(in oklch, var(--foreground) 30%, transparent);
+}
+
+.login-wait-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: loginWaitPulse 1s ease-in-out infinite;
+}
+
+.login-wait-dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.login-wait-dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes loginWaitPulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 
 @media (max-width: 420px) {

@@ -1,0 +1,3 @@
+- [ ] Finish the Dribbble-inspired sign-in design and align OTP calls with existing sign-in helpers.
+- [ ] Add an animated waiting-puppy pose during sign-in and OTP requests.
+- [ ] Verify the sign-in page and confirm the preview build is clean.

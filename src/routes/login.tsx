@@ -9,6 +9,16 @@ import { sendLoginOtp, verifyLoginOtp, loginWithPassword } from "@/lib/erp-auth.
 import { setSession, getSession } from "@/lib/auth";
 
 export const Route = createFileRoute("/login")({
+  head: () => ({
+    meta: [
+      { title: "Sign in | Okie Dokie MOM Portal" },
+      { name: "description", content: "Sign in to Okie Dokie's Client Visit MOM Portal." },
+      { property: "og:title", content: "Sign in | Okie Dokie MOM Portal" },
+      { property: "og:description", content: "Sign in to Okie Dokie's Client Visit MOM Portal." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
   beforeLoad: () => {
     if (typeof window !== "undefined" && getSession()) {
       throw { redirect: { to: "/" } };
@@ -21,7 +31,7 @@ type Mode = "otp" | "password";
 type OtpStep = "mobile" | "otp";
 
 // ── Dog mascot ────────────────────────────────────────────────────────────────
-function DogMascot({ eyesCovered }: { eyesCovered: boolean }) {
+function DogMascot({ eyesCovered, peeking, pending }: { eyesCovered: boolean; peeking: boolean; pending: boolean }) {
   const common = {
     position: "absolute" as const,
     top: 0,
@@ -72,7 +82,7 @@ function DogMascot({ eyesCovered }: { eyesCovered: boolean }) {
   return (
     <div style={{ position: "relative", width: 190, height: 200 }}>
       {/* ── Normal: eyes open + all animations ── */}
-      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered ? 0 : 1 }} xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered && !peeking ? 0 : 1 }} xmlns="http://www.w3.org/2000/svg">
         <style>{styles}</style>
 
         {/* Tail (behind body) */}
@@ -177,7 +187,7 @@ function DogMascot({ eyesCovered }: { eyesCovered: boolean }) {
       </svg>
 
       {/* ── Eyes covered: paws up ── */}
-      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered ? 1 : 0 }} xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 190 200" style={{ ...common, opacity: eyesCovered && !peeking ? 1 : 0 }} xmlns="http://www.w3.org/2000/svg">
         <style>{`
           @keyframes dogSway2 {
             0%,100% { transform: rotate(-1deg) translateX(-1px); }
@@ -246,6 +256,23 @@ function DogMascot({ eyesCovered }: { eyesCovered: boolean }) {
           <ellipse cx="154" cy="86"  rx="5" ry="3.5" fill="#B87018"/>
         </g>
       </svg>
+      {peeking && (
+        <svg viewBox="0 0 190 200" style={common} aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <path d="M48 154c4-18 11-42 19-59 4-8 14-10 20-5 5 4 6 11 3 17l-11 27c-3 8-2 17 0 25Z" fill="#E8A030" />
+          <ellipse cx="72" cy="86" rx="17" ry="13" fill="#CF8220" />
+          <ellipse cx="61" cy="83" rx="4.5" ry="3" fill="#B87018" />
+          <ellipse cx="69" cy="79" rx="4.5" ry="3" fill="#B87018" />
+          <ellipse cx="77" cy="79" rx="4.5" ry="3" fill="#B87018" />
+          <ellipse cx="84" cy="83" rx="4.5" ry="3" fill="#B87018" />
+        </svg>
+      )}
+      {pending && (
+        <div className="login-wait-bubble" aria-hidden="true">
+          <span className="login-wait-dot" />
+          <span className="login-wait-dot" />
+          <span className="login-wait-dot" />
+        </div>
+      )}
     </div>
   );
 }
@@ -256,7 +283,7 @@ function LandscapeBackground() {
     <svg
       viewBox="0 0 1440 320"
       preserveAspectRatio="xMidYMax slice"
-      style={{ position: "fixed", bottom: 0, left: 0, width: "100%", height: "46%", pointerEvents: "none", zIndex: 0 }}
+      style={{ position: "fixed", bottom: 0, left: 0, width: "100%", height: "38%", pointerEvents: "none", zIndex: 0 }}
       xmlns="http://www.w3.org/2000/svg"
     >
       {/* Far hill */}
@@ -356,8 +383,6 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const [otpStep, setOtpStep] = useState<OtpStep>("mobile");
-  const [requestId, setRequestId] = useState("");
-  const [sessionCookie, setSessionCookie] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -398,9 +423,7 @@ function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const result = await sendLoginOtp({ data: { mobile } });
-      setRequestId(result.requestId);
-      setSessionCookie(result.sessionCookie ?? "");
+      await sendLoginOtp({ data: { mobile } });
       setOtpStep("otp");
       setTimeout(() => otpRefs.current[0]?.focus(), 50);
     } catch (err: unknown) {
@@ -420,7 +443,7 @@ function LoginPage() {
     }
     setLoading(true);
     try {
-      const result = await verifyLoginOtp({ data: { mobile, otp: otpString, requestId, sessionCookie } });
+      const result = await verifyLoginOtp({ data: { mobile, otp: otpString } });
       await finishLogin(result.name);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -455,64 +478,53 @@ function LoginPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #FAFCFF 0%, #F0F8E8 100%)",
-        position: "relative",
-        overflow: "hidden",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        paddingLeft: "max(16px, env(safe-area-inset-left,0px))",
-        paddingRight: "max(16px, env(safe-area-inset-right,0px))",
-        paddingBlock: "2rem",
-      }}
-    >
+    <div className="login-stage">
       <LandscapeBackground />
 
-      <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 380 }}>
-        {/* Dog mascot */}
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: -18, position: "relative", zIndex: 20 }}>
-          <DogMascot eyesCovered={passwordFocused} />
+      <main className="login-panel">
+        <div className="login-mascot">
+          <DogMascot
+            eyesCovered={passwordFocused && !showPassword}
+            peeking={passwordFocused && showPassword}
+            pending={loading}
+          />
         </div>
 
-        {/* Card */}
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-lg" style={{ position: "relative", zIndex: 10 }}>
+        <section className="login-card" aria-label="Okie Dokie staff sign in">
+          <div className="mb-5 pt-2 text-center">
+            <h1 className="font-display text-2xl font-bold">Welcome back, friend.</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Sign in to continue.</p>
+          </div>
 
           {!(mode === "otp" && otpStep === "otp") && (
             <div className="mb-5 flex rounded-xl border border-border bg-muted p-1">
-              <button
+              <Button
                 type="button"
+                variant={mode === "password" ? "secondary" : "ghost"}
                 onClick={() => switchMode("password")}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                  mode === "password"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                aria-pressed={mode === "password"}
+                className="h-10 flex-1 gap-2 rounded-lg text-sm font-semibold"
               >
                 <KeyRound className="h-3.5 w-3.5" />
                 Password
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant={mode === "otp" ? "secondary" : "ghost"}
                 onClick={() => switchMode("otp")}
-                className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                  mode === "otp"
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                aria-pressed={mode === "otp"}
+                className="h-10 flex-1 gap-2 rounded-lg text-sm font-semibold"
               >
                 <Smartphone className="h-3.5 w-3.5" />
                 OTP
-              </button>
+              </Button>
             </div>
           )}
 
           {mode === "password" && (
             <form onSubmit={handlePasswordLogin} className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground">Sign in with your ERP credentials</p>
+                <p className="text-sm text-muted-foreground">Use your registered staff account</p>
               </div>
 
               <div className="space-y-3">
@@ -525,7 +537,8 @@ function LoginPage() {
                     inputMode="numeric"
                     maxLength={10}
                     placeholder="Mobile number"
-                    className="pl-11 font-mono tracking-widest"
+                    className="h-12 rounded-xl pl-11 font-mono tracking-widest"
+                    aria-label="Mobile number"
                     value={mobile}
                     onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
                     autoFocus
@@ -538,7 +551,8 @@ function LoginPage() {
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
-                    className="pr-10"
+                    className="h-12 rounded-xl pr-12"
+                    aria-label="Password"
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(""); }}
                     onFocus={() => setPasswordFocused(true)}
@@ -548,9 +562,11 @@ function LoginPage() {
                   />
                   <button
                     type="button"
+                    onMouseDown={(event) => event.preventDefault()}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -565,7 +581,7 @@ function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full gap-2 font-semibold"
+                className="h-11 w-full gap-2 rounded-xl bg-seal font-semibold text-seal-foreground hover:bg-seal/90"
                 disabled={loading || mobile.length !== 10 || !password}
               >
                 {loading ? "Signing in…" : (<>Sign in <ArrowRight className="h-4 w-4" /></>)}
@@ -588,7 +604,8 @@ function LoginPage() {
                   inputMode="numeric"
                   maxLength={10}
                   placeholder="Mobile number"
-                  className="pl-11 font-mono tracking-widest"
+                  className="h-12 rounded-xl pl-11 font-mono tracking-widest"
+                  aria-label="Mobile number"
                   value={mobile}
                   onChange={(e) => { setMobile(e.target.value.replace(/\D/g, "").slice(0, 10)); setError(""); }}
                   autoFocus
@@ -605,7 +622,7 @@ function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full gap-2 font-semibold"
+                className="h-11 w-full gap-2 rounded-xl bg-seal font-semibold text-seal-foreground hover:bg-seal/90"
                 disabled={loading || mobile.length !== 10}
               >
                 {loading ? "Sending…" : (<>Get OTP <ArrowRight className="h-4 w-4" /></>)}
@@ -631,9 +648,8 @@ function LoginPage() {
                     value={digit}
                     onChange={(e) => handleOtpInput(i, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                    onFocus={() => setPasswordFocused(true)}
-                    onBlur={() => setPasswordFocused(false)}
-                    className="h-12 w-full text-center font-mono text-xl font-bold"
+                    aria-label={`OTP digit ${i + 1}`}
+                    className="h-12 w-full rounded-xl text-center font-mono text-xl font-bold"
                     disabled={loading}
                     autoComplete={i === 0 ? "one-time-code" : "off"}
                   />
@@ -648,36 +664,35 @@ function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full gap-2 font-semibold"
+                className="h-11 w-full gap-2 rounded-xl bg-seal font-semibold text-seal-foreground hover:bg-seal/90"
                 disabled={loading || otp.join("").length < 4}
               >
                 {loading ? "Verifying…" : (<><ShieldCheck className="h-4 w-4" /> Verify & Sign in</>)}
               </Button>
 
-              <button
+              <Button
                 type="button"
+                variant="ghost"
                 onClick={() => { setOtpStep("mobile"); setOtp(["", "", "", "", "", ""]); setError(""); }}
-                className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                className="h-9 w-full gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                 disabled={loading}
               >
                 <RotateCcw className="h-3 w-3" /> Change number
-              </button>
+              </Button>
             </form>
           )}
-          {/* Seal */}
-          <div className="mt-5 flex justify-center">
-            <div className="rounded-full bg-muted p-1.5">
-              <Seal className="h-20 w-20 text-primary" topText="MOM PORTAL" bottomText="OKIE DOKIE">
-                <image href={logoUrl} x="23" y="23" width="54" height="54" />
-              </Seal>
-            </div>
+          <div className="mt-6 flex items-center justify-center gap-2 border-t border-border pt-4">
+            <Seal className="h-8 w-8 text-primary" topText="MOM PORTAL" bottomText="OKIE DOKIE">
+              <image href={logoUrl} x="23" y="23" width="54" height="54" />
+            </Seal>
+            <span className="text-xs font-medium text-muted-foreground">Okie Dokie · MOM Portal</span>
           </div>
-        </div>
+        </section>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
+        <p className="mt-5 text-center text-xs text-muted-foreground">
           Only registered Okie Dokie staff can sign in
         </p>
-      </div>
+      </main>
     </div>
   );
 }
